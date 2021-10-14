@@ -1,0 +1,13 @@
+outbound = 0
+inbound = 1
+
+Melrose Highlands
+WR-0075-B
+Parent
+place-WR-0075
+
+North Station
+place-north
+
+Need to filter based on date and time to show only schedule which is from now 
+forward: filter[min_time], filter[max_time]
