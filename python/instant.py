@@ -1,7 +1,7 @@
 import requests
 import secret_constants
 from datetime import datetime
-import sched, time
+import time
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
@@ -22,9 +22,9 @@ def get_schedule(route_id, stop_id, direction_id):
     hour = curr_time.hour
     minute = curr_time.minute
 
-    r = requests.get(API_URL+'/schedules?include=stop&filter[route]='+\
+    r = requests.get(API_URL+'/schedules?include=stop,prediction&filter[route]='+\
         route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+
-        '&include=prediction&sort=arrival_time&filter[min_time]='+str(hour)+':'+str(minute)+'&'+API_REQUEST)
+        '&sort=arrival_time&filter[min_time]='+str(hour)+':'+str(minute)+'&'+API_REQUEST)
 
     return r
 
@@ -91,12 +91,11 @@ def get_current_schedule():
     else:
         print("No outbound prediction available")
 
-    print(next_inbound_arrival_time)
-    print(next_outbound_arrival_time)
+    return next_inbound_arrival_time, next_outbound_arrival_time, next_inbound_departure_time, next_outbound_departure_time
 
 if __name__ == '__main__':
-    s = sched.scheduler(time.time, time.sleep)
-    s.enter(1, 1, get_current_schedule)
     while True:
-        s.enter(1, 1, get_current_schedule)
-        s.run()
+        niat, noat, nidt, nodt = get_current_schedule()
+        print(niat)
+        print(noat)
+        time.sleep(10)
