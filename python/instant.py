@@ -1,6 +1,7 @@
 import requests
 import secret_constants
 from datetime import datetime
+import sched, time
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
@@ -20,13 +21,19 @@ def get_schedule(route_id, stop_id, direction_id):
     curr_time = get_current_time()
     hour = curr_time.hour
     minute = curr_time.minute
+
     r = requests.get(API_URL+'/schedules?include=stop&filter[route]='+\
         route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+
-        '&filter[min_time]='+str(hour)+':'+str(minute)+'&'+API_REQUEST)
+        '&include=prediction&sort=arrival_time&filter[min_time]='+str(hour)+':'+str(minute)+'&'+API_REQUEST)
+
     return r
 
 def get_predictions(stop_id, direction_id):
     r = requests.get(API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST)
+    return r
+
+def get_prediction_by_id(prediction_id):
+    r = requests.get(API_URL+'/predictions?filter[id]='+prediction_id+'&'+API_REQUEST)
     return r
 
 def get_stops(route_id):
@@ -41,68 +48,55 @@ def get_current_schedule():
     #Outbound to Melrose Highlands from North Station scheduled
     outbound_r = get_schedule('CR-Haverhill', 'place-WR-0075', '0')
     outbound_json = outbound_r.json()
-    #print(outbound_json)
     if len(outbound_json['data']) > 0:
         next_outbound = outbound_json['data'][0] #Sorted by date/time
         next_outbound_arrival_time = next_outbound['attributes']['arrival_time']
         next_outbound_departure_time = next_outbound['attributes']['departure_time']
     else:
-        #TODO: Handle empty
-        pass
-
-    #Outbound to Melrose Highlands from North Station predictions
-    outbound_pred_r = get_predictions('place-WR-0075', '0')
-    outbound_pred_json = outbound_pred_r.json()
-    if len(outbound_pred_json['data']) > 0:
-        next_outbound_pred = outbound_pred_json['data'][0] #Sorted by date/time
-        next_outbound_pred_arrival_time = next_outbound_pred['attributes']['arrival_time']
-        next_outbound_pred_departure_time = next_outbound_pred['attributes']['departure_time']
-    else:
-        #TODO: Handle empty
-        pass
+        next_outbound = None
+        next_outbound_arrival_time = None
+        next_outbound_departure_time = None
 
     #Inbound to North Station from Melrose Highlands scheduled
     inbound_r = get_schedule('CR-Haverhill', 'place-WR-0075', '1')
     inbound_json = inbound_r.json()
-    print(inbound_json)
     if len(inbound_json['data']) > 0:
         next_inbound = inbound_json['data'][0] #Sorted by date/time
         next_inbound_arrival_time = next_inbound['attributes']['arrival_time']
         next_inbound_departure_time = next_outbound['attributes']['departure_time']
     else:
-        #TODO: Handle empty
-        pass
+        next_inbound = None
+        next_inbound_arrival_time = None
+        next_inbound_departure_time = None
 
-    #Inbound to North Station from Melrose Highlands predicted
-    inbound_pred_r = get_predictions('place-WR-0075', '1')
-    inbound_pred_json = inbound_pred_r.json()
-    print("---",inbound_pred_json['data'])
-    if len(inbound_pred_json['data']) > 0:
-        next_inbound_pred = inbound_pred_json['data'][0] #Sorted by date/time
-        next_inbound_pred_arrival_time = next_inbound_pred['attributes']['arrival_time']
-        next_inbound_pred_departure_time = next_inbound_pred['attributes']['departure_time']
+    inbound_prediction_data = next_inbound['relationships']['prediction']['data']
+    if inbound_prediction_data != None:
+        inbound_predicted_time_json = get_prediction_by_id(inbound_prediction_data['id']).json()
+        inbound_predicted_time_arr = inbound_predicted_time_json['attributes']['arrival_time']
+        inbound_predicted_time_dep = inbound_predicted_time_json['attributes']['departure_time']
+        next_inbound_arrival_time = inbound_predicted_time_arr
+        next_inbound_departure_time = inbound_predicted_time_dep
+        print("INBOUND PREDICTED: "+str(inbound_predicted_time_arr))
     else:
-        #TODO: Handle empty
-        pass
-
+        print("No inbound prediction available")
     
-    #print(next_outbound_pred)
-    #print(next_inbound_pred)
-    #print(next_outbound_arrival_time)
-    #print(next_inbound_arrival_time)
+    outbound_predicted_data = next_outbound['relationships']['prediction']['data']
+    if outbound_predicted_data != None:
+        outbound_predicted_time_json = get_prediction_by_id(outbound_predicted_data['id']).json()
+        outbound_predicted_time_arr = outbound_predicted_time_json['attributes']['arrival_time']
+        outbound_predicted_time_dep = outbound_predicted_time_json['attributes']['departure_time']
+        next_outbound_arrival_time = outbound_predicted_time_arr
+        next_outbound_departure_time = outbound_predicted_time_dep
+        print("OUTBOUND PREDICTED: "+str(outbound_predicted_time_arr))
+    else:
+        print("No outbound prediction available")
+
+    print(next_inbound_arrival_time)
+    print(next_outbound_arrival_time)
 
 if __name__ == '__main__':
-    #lines_json = r.json()
-    #get_line('line-Haverhill')
-    #print("------")
-    #get_schedule('CR-Haverhill')
-    #print("------")
-    #get_routes('CR-Haverhill')
-    #get_stops('CR-Haverhill')
-    #schedule_outbound_mh = get_schedule('CR-Haverhill', 'place-WR-0075', '0')
-    #outbound_predictions = get_predictions('place-WR-0075','0')
-
-    #schedule_inbound_mh = get_schedule('CR-Haverhill', 'place-WR-0075', '1')
-    #inbound_predictions = get_predictions('place-WR-0075','1')
-
-    get_current_schedule()
+    s = sched.scheduler(time.time, time.sleep)
+    s.enter(1, 1, get_current_schedule)
+    while True:
+        s.enter(1, 1, get_current_schedule)
+        s.run()
