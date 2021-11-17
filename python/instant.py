@@ -86,8 +86,8 @@ def get_current_schedule():
     inbound_prediction_data = next_inbound['relationships']['prediction']['data']
     if inbound_prediction_data != None:
         inbound_predicted_time_id = inbound_prediction_data['id']
-        inbound_predicted_time_json = get_predictions(stop_id, INBOUND).json()
-        outbound_predicted_time_json = find_prediction_by_id(inbound_predicted_time_id, inbound_predicted_time_json)
+        predictions_inbound = get_predictions(stop_id, INBOUND).json()
+        inbound_predicted_time_json = find_prediction_by_id(inbound_predicted_time_id, predictions_inbound)
         inbound_predicted_time_arr = inbound_predicted_time_json['attributes']['arrival_time']
         inbound_predicted_time_dep = inbound_predicted_time_json['attributes']['departure_time']
         next_inbound_arrival_time = inbound_predicted_time_arr
@@ -99,8 +99,8 @@ def get_current_schedule():
     outbound_predicted_data = next_outbound['relationships']['prediction']['data']
     if outbound_predicted_data != None:
         outbound_predicted_time_id = outbound_predicted_data['id']
-        outbound_predicted_time_json = get_predictions(stop_id, OUTBOUND).json()
-        outbound_predicted_time_json = find_prediction_by_id(outbound_predicted_time_id, outbound_predicted_time_json)
+        predictions_outbound = get_predictions(stop_id, OUTBOUND).json()
+        outbound_predicted_time_json = find_prediction_by_id(outbound_predicted_time_id, predictions_outbound)
         outbound_predicted_time_arr = outbound_predicted_time_json['attributes']['arrival_time']
         outbound_predicted_time_dep = outbound_predicted_time_json['attributes']['departure_time']
         next_outbound_arrival_time = outbound_predicted_time_arr
