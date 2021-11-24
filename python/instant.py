@@ -2,6 +2,7 @@ import requests
 import secret_constants
 from datetime import datetime
 import time
+from inkytrain import InkyTrain
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
@@ -82,8 +83,10 @@ def get_current_schedule():
         next_inbound = None
         next_inbound_arrival_time = None
         next_inbound_departure_time = None
-
-    inbound_prediction_data = next_inbound['relationships']['prediction']['data']
+    try:
+        inbound_prediction_data = next_inbound['relationships']['prediction']['data']
+    except:
+        inbound_prediction_data = None
     if inbound_prediction_data != None:
         inbound_predicted_time_id = inbound_prediction_data['id']
         predictions_inbound = get_predictions(stop_id, INBOUND).json()
@@ -92,11 +95,12 @@ def get_current_schedule():
         inbound_predicted_time_dep = inbound_predicted_time_json['attributes']['departure_time']
         next_inbound_arrival_time = inbound_predicted_time_arr
         next_inbound_departure_time = inbound_predicted_time_dep
-        print("INBOUND PREDICTION: "+str(inbound_predicted_time_arr))
     else:
         print("No inbound prediction available")
-    
-    outbound_predicted_data = next_outbound['relationships']['prediction']['data']
+    try: 
+        outbound_predicted_data = next_outbound['relationships']['prediction']['data']
+    except:
+        outbound_predicted_data = None
     if outbound_predicted_data != None:
         outbound_predicted_time_id = outbound_predicted_data['id']
         predictions_outbound = get_predictions(stop_id, OUTBOUND).json()
@@ -105,15 +109,23 @@ def get_current_schedule():
         outbound_predicted_time_dep = outbound_predicted_time_json['attributes']['departure_time']
         next_outbound_arrival_time = outbound_predicted_time_arr
         next_outbound_departure_time = outbound_predicted_time_dep
-        print("OUTBOUND PREDICTION: "+str(outbound_predicted_time_arr))
     else:
         print("No outbound prediction available")
 
     return next_inbound_arrival_time, next_outbound_arrival_time, next_inbound_departure_time, next_outbound_departure_time
 
 if __name__ == '__main__':
+    it = InkyTrain()
+    old_niat = None
+    old_noat = None
+    old_nidt = None
+    old_nodt = None
     while True:
         niat, noat, nidt, nodt = get_current_schedule()
-        print(niat)
-        print(noat)
-        time.sleep(10)
+        if (old_niat != niat or old_noat != noat): 
+            it.draw_inbound_outbound("Haverhill", niat, noat)
+        old_niat = niat
+        old_noat = noat
+        old_nidt = nidt
+        old_nodt = nodt
+        time.sleep(60) #seconds
