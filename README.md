@@ -3,4 +3,4 @@ InstantMBTA is a service for getting the latest MBTA schedules and alerts and di
 
 This project retrieves the latest train schedules and finds the latest predicted time for inbound and outbound trains, leveraging the [MBTA API](https://github.com/mbta/api).
 
-The date & time along with other useful information are then displayed on the inky pHAT.
+The date & time, along with other useful information are then displayed on the inky pHAT.
