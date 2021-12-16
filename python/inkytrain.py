@@ -49,7 +49,7 @@ class InkyTrain():
         y_date = 0
         self.draw.text((x_date, y_date), date_text, self.inky_display.RED, font_date)
 
-        inbound_message = "Next Inbound: " + next_inbound
+        inbound_message = "Next Inbound:    " + next_inbound
         w_inbound, h_inbound = font_line.getsize(inbound_message)
         x_inbound = 10
         y_inbound = h_line
