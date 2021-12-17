@@ -57,10 +57,7 @@ def get_current_time():
     current_time = datetime.now().strftime('%H:%M')
     return current_time
 
-def get_current_schedule():
-    #Outbound to Melrose Highlands from North Station scheduled
-    route_id = 'CR-Haverhill'
-    stop_id = 'place-WR-0075'
+def get_current_schedule(route_id, stop_id):
     outbound_r = get_schedule(route_id, stop_id, OUTBOUND)
     outbound_json = outbound_r.json()
     if len(outbound_json['data']) > 0:
@@ -72,8 +69,7 @@ def get_current_schedule():
         next_outbound_arrival_time = None
         next_outbound_departure_time = None
 
-    #Inbound to North Station from Melrose Highlands scheduled
-    inbound_r = get_schedule('CR-Haverhill', 'place-WR-0075', INBOUND)
+    inbound_r = get_schedule(route_id, stop_id, INBOUND)
     inbound_json = inbound_r.json()
     if len(inbound_json['data']) > 0:
         next_inbound = inbound_json['data'][0] #Sorted by date/time
@@ -99,7 +95,7 @@ def get_current_schedule():
         else:
             print("Unable to find predictions by id for inbound predictions.")
     else:
-        print("No inbound prediction available")
+        print("No inbound prediction available for "+stop_id)
     try: 
         outbound_predicted_data = next_outbound['relationships']['prediction']['data']
     except:
@@ -116,22 +112,28 @@ def get_current_schedule():
         else:
             print("Unable to find predictions by id for outbound predictions.")
     else:
-        print("No outbound prediction available")
+        print("No outbound prediction available for "+stop_id)
 
     return next_inbound_arrival_time, next_outbound_arrival_time, next_inbound_departure_time, next_outbound_departure_time
 
 if __name__ == '__main__':
     it = InkyTrain()
-    old_niat = None
-    old_noat = None
-    old_nidt = None
-    old_nodt = None
+    old_mh_niat = None
+    old_mh_noat = None
+    old_mh_nidt = None
+    old_mh_nodt = None
+    old_ns_nodt = None
+    route_id = 'CR-Haverhill'
+    melrose_highlands = 'place-WR-0075'
+    north_station = 'place-north'
     while True:
-        niat, noat, nidt, nodt = get_current_schedule()
-        if (old_niat != niat or old_noat != noat): 
-            it.draw_inbound_outbound("Haverhill", niat, noat)
-        old_niat = niat
-        old_noat = noat
-        old_nidt = nidt
-        old_nodt = nodt
+        mh_niat, mh_noat, mh_nidt, mh_nodt = get_current_schedule(route_id, melrose_highlands)
+        ns_niat, ns_noat, ns_nidt, ns_nodt = get_current_schedule(route_id, north_station)
+        if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt): 
+            it.draw_inbound_outbound("Haverhill", "Melrose Highlands", "North Station", mh_niat, mh_noat, ns_niat, ns_nodt)
+        old_mh_niat = mh_niat
+        old_mh_noat = mh_noat
+        old_mh_nidt = mh_nidt
+        old_mh_nodt = mh_nodt
+        old_ns_nodt = ns_nodt
         time.sleep(60) #seconds
