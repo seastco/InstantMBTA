@@ -2,7 +2,11 @@ import requests
 import secret_constants
 from datetime import datetime
 import time
-from inkytrain import InkyTrain
+
+"""
+A collection of functions leveraging the MBTA API (v3)
+See: https://www.mbta.com/developers/v3-api
+"""
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
@@ -11,15 +15,24 @@ INBOUND = "1"
 
 print_headers = False
 
+"""
+Get information for a specific line
+"""
 def get_line(line_name):
     r = requests.get(API_URL+'/lines/'+line_name+'?'+API_REQUEST)
     return r
 
 
+"""
+Get information for a specific route
+"""
 def get_routes(route_id):
     r = requests.get(API_URL+'/routes/'+route_id+'?'+API_REQUEST)
     return r
 
+"""
+Get the scheudle given a route, stop and direction
+"""
 def get_schedule(route_id, stop_id, direction_id):
     hh_mm = get_current_time()
     r = requests.get(API_URL+'/schedules?include=stop,prediction&filter[route]='+\
@@ -57,6 +70,18 @@ def get_current_time():
     current_time = datetime.now().strftime('%H:%M')
     return current_time
 
+"""
+Get the current schedule given a route id and stop id
+It will first get the schedule and then see if there are any predictions.
+If there are predictions for the route and stop it will choose the prediction over
+the original schedule.
+If there is neither a scheduled time in the same day nor a prediction,
+it will return None for that specific entry
+
+The closest time is that which is used.
+route_id: The ID of the route
+stop_id: The ID of the stop
+"""
 def get_current_schedule(route_id, stop_id):
     outbound_r = get_schedule(route_id, stop_id, OUTBOUND)
     outbound_json = outbound_r.json()
@@ -116,8 +141,8 @@ def get_current_schedule(route_id, stop_id):
 
     return next_inbound_arrival_time, next_outbound_arrival_time, next_inbound_departure_time, next_outbound_departure_time
 
+"""Primarily for testing without the inky display"""
 if __name__ == '__main__':
-    it = InkyTrain()
     old_mh_niat = None
     old_mh_noat = None
     old_mh_nidt = None
@@ -129,8 +154,11 @@ if __name__ == '__main__':
     while True:
         mh_niat, mh_noat, mh_nidt, mh_nodt = get_current_schedule(route_id, melrose_highlands)
         ns_niat, ns_noat, ns_nidt, ns_nodt = get_current_schedule(route_id, north_station)
-        if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt): 
-            it.draw_inbound_outbound("Haverhill", "Melrose Highlands", "North Station", mh_niat, mh_noat, ns_niat, ns_nodt)
+        if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt):
+            print("Screen refresh activated")
+        print(mh_niat, mh_noat, mh_nidt, mh_nodt)
+        print(ns_niat, ns_noat, ns_nidt, ns_nodt)
+        print("-----")
         old_mh_niat = mh_niat
         old_mh_noat = mh_noat
         old_mh_nidt = mh_nidt
