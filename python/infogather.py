@@ -37,8 +37,7 @@ def get_schedule(route_id, stop_id, direction_id):
     hh_mm = get_current_time()
     r = requests.get(API_URL+'/schedules?include=stop,prediction&filter[route]='+\
         route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+
-        '&sort=arrival_time&filter[min_time]='+hh_mm+'&'+API_REQUEST)
-
+        '&sort=departure_time&filter[min_time]='+hh_mm+'&'+API_REQUEST)
     return r
 
 """
