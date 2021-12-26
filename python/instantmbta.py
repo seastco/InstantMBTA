@@ -32,8 +32,8 @@ if __name__ == '__main__':
     north_station = 'place-north'
     while True:
         try:
-            mh_niat, mh_noat, mh_nidt, mh_nodt = get_current_schedule(route_id, melrose_highlands)
-            ns_niat, ns_noat, ns_nidt, ns_nodt = get_current_schedule(route_id, north_station)
+            mh_niat, mh_noat, mh_nidt, mh_nodt = ig.get_current_schedule(route_id, melrose_highlands)
+            ns_niat, ns_noat, ns_nidt, ns_nodt = ig.get_current_schedule(route_id, north_station)
             if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt): 
                 it.draw_inbound_outbound("Haverhill", "Melrose Highlands", "North Station", mh_niat, mh_noat, ns_niat, ns_nodt)
         except Exception as err:
