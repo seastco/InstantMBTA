@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 python/secret_constants.py
+python/*.log.*
+python/*.log
