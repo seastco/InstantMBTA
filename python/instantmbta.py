@@ -1,6 +1,5 @@
 import time
 from inkytrain import InkyTrain
-from infogather import get_current_schedule
 import logging
 import logging.handlers
 from infogather import InfoGather
