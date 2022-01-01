@@ -36,7 +36,8 @@ if __name__ == '__main__':
             if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt): 
                 it.draw_inbound_outbound("Haverhill", "Melrose Highlands", "North Station", mh_niat, mh_noat, ns_niat, ns_nodt)
         except Exception as err:
-            logger.error("There was an exception with the connection: {0}").format(err)
+            logger.exception(err)
+            continue
         logger.info("Melrose Highlands: {}".format(' '.join(map(str, [mh_niat, mh_noat, mh_nidt, mh_nodt]))))
         logger.info("North Station: {}".format(' '.join(map(str, [ns_niat, ns_noat, ns_nidt, ns_nodt]))))
         old_mh_niat = mh_niat
