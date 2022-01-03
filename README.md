@@ -7,6 +7,7 @@ This project retrieves the latest train schedules and finds the latest predicted
 The date & time, along with other useful information are then displayed on the inky pHAT.
 
 To run the software with a Raspberry Pi that has an inky display, run the instantmbta script:
+
 `python3 instantmbta.py Route_ID, Route_Name, Stop1_ID, Stop1_Name, Stop2_ID, Stop2_Name`
 
 To run the software without a Raspberry Pi with an inky display, simply run the infogather script:
