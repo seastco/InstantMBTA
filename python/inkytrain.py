@@ -67,7 +67,7 @@ class InkyTrain():
         w_line, h_line = font_line.getsize(line_text)
         x_line = self.STANDARD_X_COORD
         y_line = 0
-        self.draw.text((x_line, y_line), line_text, self.inky_display.BLACK, font_line)
+        self.draw.text((x_line, y_line), line_text, self.inky_display.ORANGE, font_line)
 
         #Today's date
         today = datetime.now()
@@ -78,7 +78,7 @@ class InkyTrain():
         self.draw.text((x_date, y_date), date_text, self.inky_display.RED, font_date)
 
         #Name of Stop 1
-        stop1_y = h_line
+        y_pos = stop1_y = h_line
         stop1_x = self.STANDARD_X_COORD
         stop1_w, stop1_h = font_stop_name.getsize(stop1)
         self.draw.text((stop1_x, stop1_y), stop1, self.inky_display.BLACK, font_stop_name)
@@ -87,35 +87,35 @@ class InkyTrain():
         s1_inbound_message = "Next Inbound:    " + s1_next_inbound
         s1_w_inbound, s1_h_inbound = font_times.getsize(s1_inbound_message)
         s1_x_inbound = self.STANDARD_X_COORD
-        s1_y_inbound = stop1_y + (s1_h_inbound)
-        self.draw.text((s1_x_inbound, s1_y_inbound), s1_inbound_message, self.inky_display.BLACK, font_times)
+        y_pos = y_pos + (s1_h_inbound)
+        self.draw.text((s1_x_inbound, y_pos), s1_inbound_message, self.inky_display.BLACK, font_times)
     
         #Stop 1 outbound information
         s1_outbound_message = "Next Outbound: " + s1_next_outbound
         s1_w_outbound, s1_h_outbound = font_times.getsize(s1_outbound_message)
         s1_x_outbound = self.STANDARD_X_COORD
-        s1_y_outbound = s1_y_inbound + (s1_h_outbound)
+        #y_pos = y_pos + (s1_h_outbound)
         #self.draw.text((s1_x_outbound, s1_y_outbound), s1_outbound_message, self.inky_display.BLACK, font_times)
 
         #Stop 2 name
         stop2_w, stop2_h = font_stop_name.getsize(stop2)
         stop2_x = self.STANDARD_X_COORD
-        stop2_y = s1_y_outbound + (stop2_h)
-        self.draw.text((stop2_x, stop2_y), stop2, self.inky_display.BLACK, font_stop_name)
+        y_pos = y_pos + (stop2_h)
+        self.draw.text((stop2_x, y_pos), stop2, self.inky_display.BLACK, font_stop_name)
 
         #Stop 2 inbound information
         s2_inbound_message = "Next Inbound:    " + s2_next_inbound
         s2_w_inbound, s2_h_inbound = font_times.getsize(s2_inbound_message)
         s2_x_inbound = self.STANDARD_X_COORD
-        s2_y_inbound = stop2_y + (s2_h_inbound)
-        self.draw.text((s2_x_inbound, s2_y_inbound), s2_inbound_message, self.inky_display.BLACK, font_times)
+        y_pos = y_pos + (s2_h_inbound)
+        self.draw.text((s2_x_inbound, y_pos), s2_inbound_message, self.inky_display.BLACK, font_times)
     
         #Stop 2 outbound information
         s2_outbound_message = "Next Outbound: " + s2_next_outbound
         s2_w_outbout, s2_h_outbound = font_times.getsize(s2_outbound_message)
         s2_x_outbound = self.STANDARD_X_COORD
-        s2_y_outbound = stop2_y + (s2_h_outbound)
-        self.draw.text((s2_x_outbound, s2_y_outbound), s2_outbound_message, self.inky_display.BLACK, font_times)
+        y_pos = y_pos + (s2_h_outbound)
+        self.draw.text((s2_x_outbound, y_pos), s2_outbound_message, self.inky_display.BLACK, font_times)
 
         self.inky_display.set_image(self.img)
         self.inky_display.show()

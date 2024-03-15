@@ -131,3 +131,4 @@ dmypy.json
 python/secret_constants.py
 python/*.log.*
 python/*.log
+.DS_Store
