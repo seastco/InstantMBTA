@@ -67,7 +67,7 @@ class InkyTrain():
         w_line, h_line = font_line.getsize(line_text)
         x_line = self.STANDARD_X_COORD
         y_line = 0
-        self.draw.text((x_line, y_line), line_text, self.inky_display.ORANGE, font_line)
+        self.draw.text((x_line, y_line), line_text, self.inky_display.BLACK, font_line)
 
         #Today's date
         today = datetime.now()
