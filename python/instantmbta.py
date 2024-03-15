@@ -65,4 +65,4 @@ if __name__ == '__main__':
         old_stop1_nidt = stop1_nidt
         old_stop1_nodt = stop1_nodt
         old_stop2_nodt = stop2_nodt
-        time.sleep(60) #seconds
+        time.sleep(120) #seconds
