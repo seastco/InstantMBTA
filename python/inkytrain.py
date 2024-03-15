@@ -60,7 +60,7 @@ class InkyTrain():
         font_times = ImageFont.truetype(HankenGroteskMedium, 18)
         font_stop_name = ImageFont.truetype(HankenGroteskBold, 20)
         font_line = ImageFont.truetype(HankenGroteskBold, 24)
-        font_date = ImageFont.truetype(HankenGroteskBold, 18)
+        font_date = ImageFont.truetype(HankenGroteskBold, 20)
 
         #Which line we are displaying information for
         left_line, top_line, right_line, bottom_line = font_line.getbbox(line)
