@@ -2,7 +2,6 @@
 
 from PIL import Image, ImageFont, ImageDraw
 from font_hanken_grotesk import HankenGroteskBold, HankenGroteskMedium
-from font_intuitive import Intuitive
 from inky.auto import auto
 from datetime import datetime
 
@@ -47,6 +46,11 @@ class InkyTrain():
             s1_next_outbound = s1_next_outbound_dt.strftime("%I:%M%p")
         else:
             s1_next_outbound = "Tomorrow"
+        if s2_next_inbound_str != None:
+            s2_next_inbound_dt = datetime.fromisoformat(s2_next_inbound_str)
+            s2_next_inbound = s2_next_inbound_dt.strftime("%I:%M%p")
+        else:
+            s2_next_inbound = "Tomorrow"
         if s2_next_outbound_str != None:
             s2_next_outbound_dt = datetime.fromisoformat(s2_next_outbound_str)
             s2_next_outbound = s2_next_outbound_dt.strftime("%I:%M%p")
@@ -56,7 +60,7 @@ class InkyTrain():
         font_times = ImageFont.truetype(HankenGroteskMedium, 18)
         font_stop_name = ImageFont.truetype(HankenGroteskBold, 20)
         font_line = ImageFont.truetype(HankenGroteskBold, 30)
-        font_date = ImageFont.truetype(HankenGroteskBold, 25)
+        font_date = ImageFont.truetype(HankenGroteskBold, 18)
 
         #Which line we are displaying information for
         line_text = line
@@ -91,7 +95,7 @@ class InkyTrain():
         s1_w_outbound, s1_h_outbound = font_times.getsize(s1_outbound_message)
         s1_x_outbound = self.STANDARD_X_COORD
         s1_y_outbound = s1_y_inbound + (s1_h_outbound)
-        self.draw.text((s1_x_outbound, s1_y_outbound), s1_outbound_message, self.inky_display.BLACK, font_times)
+        #self.draw.text((s1_x_outbound, s1_y_outbound), s1_outbound_message, self.inky_display.BLACK, font_times)
 
         #Stop 2 name
         stop2_w, stop2_h = font_stop_name.getsize(stop2)
@@ -99,6 +103,13 @@ class InkyTrain():
         stop2_y = s1_y_outbound + (stop2_h)
         self.draw.text((stop2_x, stop2_y), stop2, self.inky_display.BLACK, font_stop_name)
 
+        #Stop 2 inbound information
+        s2_inbound_message = "Next Inbound:    " + s2_next_inbound
+        s2_w_inbound, s2_h_inbound = font_times.getsize(s2_inbound_message)
+        s2_x_inbound = self.STANDARD_X_COORD
+        s2_y_inbound = stop2_y + (s2_h_inbound)
+        self.draw.text((s2_x_inbound, s2_y_inbound), s2_inbound_message, self.inky_display.BLACK, font_times)
+    
         #Stop 2 outbound information
         s2_outbound_message = "Next Outbound: " + s2_next_outbound
         s2_w_outbout, s2_h_outbound = font_times.getsize(s2_outbound_message)

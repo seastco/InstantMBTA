@@ -88,6 +88,12 @@ class InfoGather():
     The closest time is that which is used.
     route_id: The ID of the route
     stop_id: The ID of the stop
+
+    Returns
+    next_inbound_arrival_time, 
+    next_outbound_arrival_time, 
+    next_inbound_departure_time, 
+    next_outbound_departure_time
     """
     def get_current_schedule(self, route_id, stop_id):
         self.logger.info("Getting schedule for {}".format(' '.join(map(str, [route_id, stop_id]))))

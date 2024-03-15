@@ -42,23 +42,27 @@ if __name__ == '__main__':
     ig = InfoGather()
     it = InkyTrain()
     
-    old_mh_niat = old_mh_noat = old_mh_nidt = old_mh_nodt = old_ns_nodt = None
-    mh_niat = mh_noat = mh_nidt = mh_nodt = None
-    ns_niat = ns_noat = ns_nidt = ns_nodt = None
+    old_stop1_niat = old_stop1_noat = old_stop1_nidt = old_stop1_nodt = old_stop2_nodt = None
+    #niat = Next Inbound Arrival Time
+    #noat = Next Outbound Arrival Time
+    #nidt = Next Inbound Departure Time
+    #nodt = Next Outbound Departure Time
+    stop1_niat = stop1_noat = stop1_nidt = stop1_nodt = None
+    stop2_niat = stop2_noat = stop2_nidt = stop2_nodt = None
     while True:
         try:
-            mh_niat, mh_noat, mh_nidt, mh_nodt = ig.get_current_schedule(route_id, stop1)
-            ns_niat, ns_noat, ns_nidt, ns_nodt = ig.get_current_schedule(route_id, stop2)
-            if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt): 
-                it.draw_inbound_outbound(route_name, stop1_name, stop2_name, mh_niat, mh_noat, ns_niat, ns_nodt)
+            stop1_niat, stop1_noat, stop1_nidt, stop1_nodt = ig.get_current_schedule(route_id, stop1)
+            stop2_niat, stop2_noat, stop2_nidt, stop2_nodt = ig.get_current_schedule(route_id, stop2)
+            if (old_stop1_niat != stop1_niat or old_stop1_noat != stop1_noat or old_stop2_nodt != stop2_nodt): 
+                it.draw_inbound_outbound(route_name, stop1_name, stop2_name, stop1_niat, stop1_noat, stop2_niat, stop2_nodt)
         except Exception as err:
             logger.exception(err)
             continue
-        logger.info("{}: {}".format(stop1_name, ' '.join(map(str, [mh_niat, mh_noat, mh_nidt, mh_nodt]))))
-        logger.info("{}: {}".format(stop2_name, ' '.join(map(str, [ns_niat, ns_noat, ns_nidt, ns_nodt]))))
-        old_mh_niat = mh_niat
-        old_mh_noat = mh_noat
-        old_mh_nidt = mh_nidt
-        old_mh_nodt = mh_nodt
-        old_ns_nodt = ns_nodt
+        logger.info("{}: {}".format(stop1_name, ' '.join(map(str, [stop1_niat, stop1_noat, stop1_nidt, stop1_nodt]))))
+        logger.info("{}: {}".format(stop2_name, ' '.join(map(str, [stop2_niat, stop2_noat, stop2_nidt, stop2_nodt]))))
+        old_stop1_niat = stop1_niat
+        old_stop1_noat = stop1_noat
+        old_stop1_nidt = stop1_nidt
+        old_stop1_nodt = stop1_nodt
+        old_stop2_nodt = stop2_nodt
         time.sleep(60) #seconds
