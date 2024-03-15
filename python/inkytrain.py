@@ -63,7 +63,7 @@ class InkyTrain():
         font_date = ImageFont.truetype(HankenGroteskBold, 18)
 
         #Which line we are displaying information for
-        w_line, h_line = font_line.getsize(line)
+        left_line, top_line, right_line, bottom_line = font_line.getbbox(line)
         x_line = self.STANDARD_X_COORD
         y_line = 0
         self.draw.text((x_line, y_line), line, self.inky_display.BLACK, font_line)
@@ -73,51 +73,51 @@ class InkyTrain():
         date_text = today.strftime("%m/%d/%y")
         #Get the width of the display
         display_width = self.inky_display.resolution[0]
-        w_date, h_date = font_date.getsize(date_text)
-        x_date = display_width - w_date
+        length_date = font_stop_name.getlength(date_text)
+        x_date = display_width - length_date
         y_date = 0
         self.draw.text((x_date, y_date), date_text, self.inky_display.RED, font_date)
 
         #Name of Stop 1
-        y_pos = h_line #Start below the Line name
+        y_pos = bottom_line #Start below the Line name
         stop1_x = self.STANDARD_X_COORD
-        stop1_w, stop1_h = font_stop_name.getsize(stop1)
         self.draw.text((stop1_x, y_pos), stop1, self.inky_display.BLACK, font_stop_name)
-        y_pos = y_pos + (stop1_h)
+        left_stop1, top_stop1, right_stop1, bottom_stop1 = font_stop_name.getbbox(stop1)
+        y_pos = y_pos + (bottom_stop1)
 
         #Stop 1 inbound information
         s1_inbound_message = "Next Inbound:    " + s1_next_inbound
-        s1_w_inbound, s1_h_inbound = font_times.getsize(s1_inbound_message)
         s1_x_inbound = self.STANDARD_X_COORD
         self.draw.text((s1_x_inbound, y_pos), s1_inbound_message, self.inky_display.BLACK, font_times)
-        y_pos = y_pos + (s1_h_inbound)
+        left_s1_inbound, top_s1_inbound, right_s1_inbound, bottom_s1_inbound = font_stop_name.getbbox(s1_inbound_message)
+        y_pos = y_pos + (bottom_s1_inbound)
     
         #Stop 1 outbound information
         s1_outbound_message = "Next Outbound: " + s1_next_outbound
-        s1_w_outbound, s1_h_outbound = font_times.getsize(s1_outbound_message)
         s1_x_outbound = self.STANDARD_X_COORD
         #self.draw.text((s1_x_outbound, y_pos), s1_outbound_message, self.inky_display.BLACK, font_times)
-        #y_pos = y_pos + (s1_h_outbound)
+        #left_s1_outbound, top_s1_outbound, right_s1_outbound, bottom_s1_outbound = font_times.getbbox(s1_outbound_message)
+        #y_pos = y_pos + (bottom_s1_outbound)
 
         #Stop 2 name
-        stop2_w, stop2_h = font_stop_name.getsize(stop2)
         stop2_x = self.STANDARD_X_COORD
         self.draw.text((stop2_x, y_pos), stop2, self.inky_display.BLACK, font_stop_name)
-        y_pos = y_pos + (stop2_h)
+        left_stop2, top_stop2, right_stop2, bottom_stop2 = font_stop_name.getbbox(stop2)
+        y_pos = y_pos + (bottom_stop2)
 
         #Stop 2 inbound information
         s2_inbound_message = "Next Inbound:    " + s2_next_inbound
-        s2_w_inbound, s2_h_inbound = font_times.getsize(s2_inbound_message)
         s2_x_inbound = self.STANDARD_X_COORD
         self.draw.text((s2_x_inbound, y_pos), s2_inbound_message, self.inky_display.BLACK, font_times)
-        y_pos = y_pos + (s2_h_inbound)
+        left_s2_inbound, top_s2_inbound, right_s2_inbound, bottom_s2_inbound = font_stop_name.getbbox(s2_inbound_message)
+        y_pos = y_pos + (bottom_s2_inbound)
     
         #Stop 2 outbound information
         s2_outbound_message = "Next Outbound: " + s2_next_outbound
-        s2_w_outbout, s2_h_outbound = font_times.getsize(s2_outbound_message)
         s2_x_outbound = self.STANDARD_X_COORD
         self.draw.text((s2_x_outbound, y_pos), s2_outbound_message, self.inky_display.BLACK, font_times)
-        y_pos = y_pos + (s2_h_outbound)
+        left_s2_outbound, top_s2_outbound, right_s2_outbound, bottom_s2_outbound = font_times.getbbox(s1_outbound_message)
+        y_pos = y_pos + (bottom_s2_outbound)
 
         self.inky_display.set_image(self.img)
         self.inky_display.set_border(self.inky_display.BLACK)
