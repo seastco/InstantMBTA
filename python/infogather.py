@@ -11,6 +11,7 @@ API_URL = "https://api-v3.mbta.com"
 OUTBOUND = "0"
 INBOUND = "1"
 LOG_FILENAME = 'instant.log'
+STANDARD_TIMEOUT = 30
 
 class InfoGather():
     """
@@ -26,25 +27,25 @@ class InfoGather():
         """
         Get information for a specific line
         """
-        r = requests.get(API_URL+'/lines/'+line_name+'?'+API_REQUEST)
+        r = requests.get(API_URL+'/lines/'+line_name+'?'+API_REQUEST, timeout=STANDARD_TIMEOUT)
         return r
 
 
-    def get_routes(self, route_id):
+    def get_routes(self, get_route_id):
         """
         Get information for a specific route
         """
-        r = requests.get(API_URL+'/routes/'+route_id+'?'+API_REQUEST)
+        r = requests.get(API_URL+'/routes/'+get_route_id+'?'+API_REQUEST, timeout=STANDARD_TIMEOUT)
         return r
 
-    def get_schedule(self, route_id, stop_id, direction_id):
+    def get_schedule(self, get_route_id, stop_id, direction_id):
         """
         Get the scheudle given a route, stop and direction
         """
         hh_mm = self.get_current_time()
         r = requests.get(API_URL+'/schedules?include=stop,prediction&filter[route]='+\
-            route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+
-            '&sort=departure_time&filter[min_time]='+hh_mm+'&'+API_REQUEST)
+            get_route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+
+            '&sort=departure_time&filter[min_time]='+hh_mm+'&'+API_REQUEST, timeout=STANDARD_TIMEOUT)
         return r
 
     def get_predictions(self, stop_id, direction_id):
@@ -52,7 +53,7 @@ class InfoGather():
         Given a STOP ID and a DIRECTION ID (INBOUND or OUTBOUND)
         Returns the predictions
         """
-        r = requests.get(API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST)
+        r = requests.get(API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST, timeout=STANDARD_TIMEOUT)
         return r
 
     def find_prediction_by_id(self, prediction_id, predictions):
@@ -65,14 +66,20 @@ class InfoGather():
         for prediction in predictions['data']:
             if prediction['id'] == prediction_id:
                 return prediction
-        self.logger.warn("There should have been a prediction found, but there wasn't.")
+        self.logger.error("There should have been a prediction found, but there wasn't.")
         return prediction
 
     def get_stops(self, for_route_id):
-        r = requests.get(API_URL+'/stops?filter[route]='+for_route_id+'&'+API_REQUEST)
+        """
+        Given a route id, get the stops associated with the route.
+        """
+        r = requests.get(API_URL+'/stops?filter[route]='+for_route_id+'&'+API_REQUEST, timeout=STANDARD_TIMEOUT)
         return r
 
     def get_current_time(self):
+        """
+        Get the current time of the system
+        """
         current_time = datetime.now().strftime('%H:%M')
         return current_time
 
@@ -95,7 +102,7 @@ class InfoGather():
         next_inbound_departure_time, 
         next_outbound_departure_time
         """
-        self.logger.info("Getting schedule for {}".format(' '.join(map(str, [a_route_id, stop_id]))))
+        self.logger.info("Getting schedule for %s", ' '.join(map(str, [a_route_id, stop_id])))
         outbound_r = self.get_schedule(a_route_id, stop_id, OUTBOUND)
         outbound_json = outbound_r.json()
         if len(outbound_json['data']) > 0:
@@ -119,7 +126,7 @@ class InfoGather():
             next_inbound_departure_time = None
         try:
             inbound_prediction_data = next_inbound['relationships']['prediction']['data']
-        except:
+        except KeyError:
             inbound_prediction_data = None
         if inbound_prediction_data is not None:
             inbound_predicted_time_id = inbound_prediction_data['id']
@@ -131,12 +138,12 @@ class InfoGather():
                 next_inbound_arrival_time = inbound_predicted_time_arr
                 next_inbound_departure_time = inbound_predicted_time_dep
             else:
-                self.logger.warn("Unable to find predictions by id for inbound predictions.")
+                self.logger.error("Unable to find predictions by id for inbound predictions.")
         else:
-            self.logger.info("No inbound prediction available for "+stop_id)
-        try: 
+            self.logger.info("No inbound prediction available for %s", stop_id)
+        try:
             outbound_predicted_data = next_outbound['relationships']['prediction']['data']
-        except:
+        except KeyError:
             outbound_predicted_data = None
         if outbound_predicted_data is not None:
             outbound_predicted_time_id = outbound_predicted_data['id']
@@ -148,16 +155,16 @@ class InfoGather():
                 next_outbound_arrival_time = outbound_predicted_time_arr
                 next_outbound_departure_time = outbound_predicted_time_dep
             else:
-                self.logger.warn("Unable to find predictions by id for outbound predictions.")
+                self.logger.error("Unable to find predictions by id for outbound predictions.")
         else:
-            self.logger.info("No outbound prediction available for "+stop_id)
+            self.logger.info("No outbound prediction available for %s", stop_id)
 
         return next_inbound_arrival_time, next_outbound_arrival_time, next_inbound_departure_time, next_outbound_departure_time
 
 if __name__ == '__main__':
 
     logger = logging.getLogger('MainLogger')
-    logger.setLevel(logging.DEBUG)   
+    logger.setLevel(logging.DEBUG)
     handler = logging.handlers.RotatingFileHandler(
               LOG_FILENAME, maxBytes=2097152, backupCount=5)
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s: %(message)s')
@@ -184,23 +191,23 @@ if __name__ == '__main__':
 
     ig = InfoGather()
 
-    old_mh_niat = old_mh_noat = old_mh_nidt = old_mh_nodt = old_ns_nodt = None
-    mh_niat = mh_noat = mh_nidt = mh_nodt = None
-    ns_niat = ns_noat = ns_nidt = ns_nodt = None
+    OLD_MH_NIAT = OLD_MH_NOAT = OLD_MH_NIDT = OLD_MH_NODT = OLD_NS_NODT = None
+    MH_NIAT = MH_NOAT = MH_NIDT = MH_NODT = None
+    NS_NIAT = NS_NOAT = NS_NIDT = NS_NODT = None
 
     while True:
         try:
-            mh_niat, mh_noat, mh_nidt, mh_nodt = ig.get_current_schedule(route_id, stop1)
-            ns_niat, ns_noat, ns_nidt, ns_nodt = ig.get_current_schedule(route_id, stop2)
-            if (old_mh_niat != mh_niat or old_mh_noat != mh_noat or old_ns_nodt != ns_nodt):
+            MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT = ig.get_current_schedule(route_id, stop1)
+            NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT = ig.get_current_schedule(route_id, stop2)
+            if (OLD_MH_NIAT != MH_NIAT or OLD_MH_NOAT != MH_NOAT or OLD_NS_NODT != NS_NODT):
                 logger.debug("Screen refresh activated")
         except Exception as err:
             logger.error("There was an exception with the connection: {0}").format(err)
-        logger.info("{}: {}".format(stop1_name, ' '.join(map(str, [mh_niat, mh_noat, mh_nidt, mh_nodt]))))
-        logger.info("{}: {}".format(stop2_name, ' '.join(map(str, [ns_niat, ns_noat, ns_nidt, ns_nodt]))))
-        old_mh_niat = mh_niat
-        old_mh_noat = mh_noat
-        old_mh_nidt = mh_nidt
-        old_mh_nodt = mh_nodt
-        old_ns_nodt = ns_nodt
+        logger.info("%s: %s", stop1_name, ' '.join(map(str, [MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT])))
+        logger.info("%s: %s", stop2_name, ' '.join(map(str, [NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT])))
+        OLD_MH_NIAT = MH_NIAT
+        OLD_MH_NOAT = MH_NOAT
+        OLD_MH_NIDT = MH_NIDT
+        OLD_MH_NODT = MH_NODT
+        OLD_NS_NODT = NS_NODT
         time.sleep(60) #seconds

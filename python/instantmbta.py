@@ -6,6 +6,7 @@ from inkytrain import InkyTrain
 from infogather import InfoGather
 
 LOG_FILENAME = 'instant.log'
+WAIT_TIME_BETWEEN_CHECKS = 120 #seconds
 
 """
 Main class to execute and continuously keep the
@@ -58,11 +59,11 @@ if __name__ == '__main__':
         except Exception as err:
             logger.exception(err)
             continue
-        logger.info("{}: {}".format(stop1_name, ' '.join(map(str, [STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT]))))
-        logger.info("{}: {}".format(stop2_name, ' '.join(map(str, [STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT]))))
+        logger.info("%s: %s", stop1_name, ' '.join(map(str, [STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT])))
+        logger.info("%s: %s", stop2_name, ' '.join(map(str, [STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT])))
         OLD_STOP1_NIAT = STOP1_NIAT
         OLD_STOP1_NOAT = STOP1_NOAT
         OLD_STOP1_NIDT = STOP1_NIDT
         OLD_STOP1_NODT = STOP1_NODT
         OLD_STOP2_NODT = STOP2_NODT
-        time.sleep(120) #seconds
+        time.sleep(WAIT_TIME_BETWEEN_CHECKS) #seconds
