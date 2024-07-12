@@ -10,6 +10,10 @@ The date & time, along with other useful information are then displayed on the i
 
 The dependencies that are required are provided in python/requirements.txt. They can be installed with your package manageer of choice.
 
+Numpy version 2.0.0 requires that the system has the OpenBlas System library.
+
+`sudo apt-get install libopenblas-dev`
+
 Note: If you are not using a Raspberry Pi with an inky display, only the *requests* package is required.
 
 ## Running the Software
