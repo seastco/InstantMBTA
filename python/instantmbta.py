@@ -58,6 +58,7 @@ if __name__ == '__main__':
                 it.draw_inbound_outbound(route_name, stop1_name, stop2_name, STOP1_NIAT, STOP1_NOAT, STOP2_NIAT, STOP2_NODT)
         except Exception as err:
             logger.exception(err)
+            time.sleep(WAIT_TIME_BETWEEN_CHECKS) #seconds
             continue
         logger.info("%s: %s", stop1_name, ' '.join(map(str, [STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT])))
         logger.info("%s: %s", stop2_name, ' '.join(map(str, [STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT])))

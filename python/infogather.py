@@ -3,8 +3,8 @@ from datetime import datetime
 import time
 import logging
 import logging.handlers
-import secret_constants
 import requests
+import python.secret_constants as secret_constants
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
@@ -113,21 +113,23 @@ class InfoGather():
             next_outbound = None
             next_outbound_arrival_time = None
             next_outbound_departure_time = None
-
+            outbound_predicted_data = None
         inbound_r = self.get_schedule(a_route_id, stop_id, INBOUND)
         inbound_json = inbound_r.json()
         if len(inbound_json['data']) > 0:
             next_inbound = inbound_json['data'][0] #Sorted by date/time
             next_inbound_arrival_time = next_inbound['attributes']['arrival_time']
-            next_inbound_departure_time = next_outbound['attributes']['departure_time']
+            next_inbound_departure_time = next_inbound['attributes']['departure_time']
         else:
             next_inbound = None
             next_inbound_arrival_time = None
             next_inbound_departure_time = None
-        try:
-            inbound_prediction_data = next_inbound['relationships']['prediction']['data']
-        except KeyError:
             inbound_prediction_data = None
+        if (next_inbound is not None):
+            try:
+                inbound_prediction_data = next_inbound['relationships']['prediction']['data']
+            except KeyError:
+                inbound_prediction_data = None
         if inbound_prediction_data is not None:
             inbound_predicted_time_id = inbound_prediction_data['id']
             predictions_inbound = self.get_predictions(stop_id, INBOUND).json()
@@ -141,10 +143,11 @@ class InfoGather():
                 self.logger.error("Unable to find predictions by id for inbound predictions.")
         else:
             self.logger.info("No inbound prediction available for %s", stop_id)
-        try:
-            outbound_predicted_data = next_outbound['relationships']['prediction']['data']
-        except KeyError:
-            outbound_predicted_data = None
+        if (next_outbound is not None):
+            try:
+                outbound_predicted_data = next_outbound['relationships']['prediction']['data']
+            except KeyError:
+                outbound_predicted_data = None
         if outbound_predicted_data is not None:
             outbound_predicted_time_id = outbound_predicted_data['id']
             predictions_outbound = self.get_predictions(stop_id, OUTBOUND).json()
