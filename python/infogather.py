@@ -4,7 +4,7 @@ import time
 import logging
 import logging.handlers
 import requests
-import python.secret_constants as secret_constants
+import secret_constants
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
@@ -125,7 +125,7 @@ class InfoGather():
             next_inbound_arrival_time = None
             next_inbound_departure_time = None
             inbound_prediction_data = None
-        if (next_inbound is not None):
+        if next_inbound is not None:
             try:
                 inbound_prediction_data = next_inbound['relationships']['prediction']['data']
             except KeyError:
@@ -143,7 +143,7 @@ class InfoGather():
                 self.logger.error("Unable to find predictions by id for inbound predictions.")
         else:
             self.logger.info("No inbound prediction available for %s", stop_id)
-        if (next_outbound is not None):
+        if next_outbound is not None:
             try:
                 outbound_predicted_data = next_outbound['relationships']['prediction']['data']
             except KeyError:
