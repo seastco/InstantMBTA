@@ -200,6 +200,10 @@ if __name__ == '__main__':
 
     while True:
         try:
+            #NIAT = Next Incoming Arrival Time
+            #NOAT = Next Outbound Arrival Time
+            #NIDT = Next Inbound Departure Time
+            #NODT = Next Outbound Departure Time
             MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT = ig.get_current_schedule(route_id, stop1)
             NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT = ig.get_current_schedule(route_id, stop2)
             if (OLD_MH_NIAT != MH_NIAT or OLD_MH_NOAT != MH_NOAT or OLD_NS_NODT != NS_NODT):

@@ -38,22 +38,22 @@ class InkyTrain():
             s1_next_inbound_dt = datetime.fromisoformat(s1_next_inbound_str)
             s1_next_inbound = s1_next_inbound_dt.strftime("%I:%M%p")
         else:
-            s1_next_inbound = "Tomorrow"
+            s1_next_inbound = "Later"
         if s1_next_outbound_str is not None:    
             s1_next_outbound_dt = datetime.fromisoformat(s1_next_outbound_str)
             s1_next_outbound = s1_next_outbound_dt.strftime("%I:%M%p")
         else:
-            s1_next_outbound = "Tomorrow"
+            s1_next_outbound = "Later"
         if s2_next_inbound_str is not None:
             s2_next_inbound_dt = datetime.fromisoformat(s2_next_inbound_str)
             s2_next_inbound = s2_next_inbound_dt.strftime("%I:%M%p")
         else:
-            s2_next_inbound = "Tomorrow"
+            s2_next_inbound = "Later"
         if s2_next_outbound_str is not None:
             s2_next_outbound_dt = datetime.fromisoformat(s2_next_outbound_str)
             s2_next_outbound = s2_next_outbound_dt.strftime("%I:%M%p")
         else:
-            s2_next_outbound = "Tomorrow"
+            s2_next_outbound = "Later"
 
         font_times = ImageFont.truetype(HankenGroteskMedium, 18)
         font_stop_name = ImageFont.truetype(HankenGroteskBold, 20)
