@@ -8,10 +8,20 @@ import secret_constants
 
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
-OUTBOUND = "0"
-INBOUND = "1"
+"""
+"https://api-v3.mbta.com/routes/Orange" 
+=>
+direction_names":[
+"South",
+"North"]
+South would be inbound at index 0
+North would be outbound at index 1
+"""
+INBOUND = "0"
+OUTBOUND = "1"
 LOG_FILENAME = 'instant.log'
 STANDARD_TIMEOUT = 30
+UPDATE_INTERVAL_SECONDS = 60
 
 class InfoGather():
     """
@@ -27,7 +37,9 @@ class InfoGather():
         """
         Get information for a specific line
         """
-        r = requests.get(API_URL+'/lines/'+line_name+'?'+API_REQUEST, timeout=STANDARD_TIMEOUT)
+        request_string = API_URL+'/lines/'+line_name+'?'+API_REQUEST
+        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
+        self.logger.debug("Getting Line Information %s", request_string)
         return r
 
 
@@ -35,17 +47,20 @@ class InfoGather():
         """
         Get information for a specific route
         """
-        r = requests.get(API_URL+'/routes/'+get_route_id+'?'+API_REQUEST, timeout=STANDARD_TIMEOUT)
+        request_string = API_URL+'/routes/'+get_route_id+'?'+API_REQUEST
+        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
+        self.logger.debug("Getting Route Information %s", request_string)
         return r
 
     def get_schedule(self, get_route_id, stop_id, direction_id):
         """
-        Get the scheudle given a route, stop and direction
+        Get the schedule given a route, stop and direction
         """
         hh_mm = self.get_current_time()
-        r = requests.get(API_URL+'/schedules?include=stop,prediction&filter[route]='+\
-            get_route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+
-            '&sort=departure_time&filter[min_time]='+hh_mm+'&'+API_REQUEST, timeout=STANDARD_TIMEOUT)
+        request_string = API_URL+'/schedules?include=stop,prediction&filter[route]='+\
+            get_route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&sort=departure_time&filter[min_time]='+hh_mm+'&'+API_REQUEST
+        self.logger.debug("Getting schedule %s", request_string)
+        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
         return r
 
     def get_predictions(self, stop_id, direction_id):
@@ -53,7 +68,9 @@ class InfoGather():
         Given a STOP ID and a DIRECTION ID (INBOUND or OUTBOUND)
         Returns the predictions
         """
-        r = requests.get(API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST, timeout=STANDARD_TIMEOUT)
+        request_string = API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST
+        self.logger.debug("Getting predictions %s", request_string)
+        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
         return r
 
     def find_prediction_by_id(self, prediction_id, predictions):
@@ -167,7 +184,7 @@ class InfoGather():
 if __name__ == '__main__':
 
     logger = logging.getLogger('MainLogger')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     handler = logging.handlers.RotatingFileHandler(
               LOG_FILENAME, maxBytes=2097152, backupCount=5)
     formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s: %(message)s')
@@ -217,4 +234,4 @@ if __name__ == '__main__':
         OLD_MH_NIDT = MH_NIDT
         OLD_MH_NODT = MH_NODT
         OLD_NS_NODT = NS_NODT
-        time.sleep(60) #seconds
+        time.sleep(UPDATE_INTERVAL_SECONDS) #seconds

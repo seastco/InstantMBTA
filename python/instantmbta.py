@@ -55,7 +55,7 @@ if __name__ == '__main__':
             STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT = ig.get_current_schedule(route_id, stop1)
             STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT = ig.get_current_schedule(route_id, stop2)
             if (OLD_STOP1_NIAT != STOP1_NIAT or OLD_STOP1_NOAT != STOP1_NOAT or OLD_STOP2_NODT != STOP2_NODT):
-                it.draw_inbound_outbound(route_name, stop1_name, stop2_name, STOP1_NIAT, STOP1_NOAT, STOP2_NIAT, STOP2_NODT)
+                it.draw_inbound_outbound(route_name, stop1_name, stop2_name, STOP1_NIDT, STOP1_NOAT, STOP2_NIAT, STOP2_NODT)
         except Exception as err:
             logger.exception(err)
             time.sleep(WAIT_TIME_BETWEEN_CHECKS) #seconds
