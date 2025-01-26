@@ -6,7 +6,7 @@ import platform
 from infogather import InfoGather
 import requests
 # Conditional import for Raspberry Pi (ARM7l or AARCH64)
-if platform.machine() in ('armv7l', 'aarch64'):
+if platform.machine() in ('armv7l', 'armv61', 'aarch64'):
     from inkytrain import InkyTrain
 else:
     InkyTrain = None
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     stop2_name = args.stop2name
 
     ig = InfoGather()
-    it = InkyTrain() if platform.machine() in ('armv7l', 'aarch64') else None
+    it = InkyTrain() if platform.machine() in ('armv7l', 'armv61', 'aarch64') else None
     
     logger.info(f'System: {platform.machine()}')
     logger.info('Starting InstantMBTA with:')
