@@ -1,3 +1,5 @@
+"""Module for gathering and processing MBTA transit information using their V3 API."""
+
 import argparse
 from datetime import datetime
 import time
@@ -122,6 +124,7 @@ class InfoGather():
         self.logger.info("Getting schedule for %s", ' '.join(map(str, [a_route_id, stop_id])))
         outbound_r = self.get_schedule(a_route_id, stop_id, OUTBOUND)
         outbound_json = outbound_r.json()
+        outbound_predicted_data = None  # Initialize here
         if len(outbound_json['data']) > 0:
             next_outbound = outbound_json['data'][0] #Sorted by date/time
             next_outbound_arrival_time = next_outbound['attributes']['arrival_time']
@@ -130,9 +133,9 @@ class InfoGather():
             next_outbound = None
             next_outbound_arrival_time = None
             next_outbound_departure_time = None
-            outbound_predicted_data = None
         inbound_r = self.get_schedule(a_route_id, stop_id, INBOUND)
         inbound_json = inbound_r.json()
+        inbound_prediction_data = None  # Initialize here
         if len(inbound_json['data']) > 0:
             next_inbound = inbound_json['data'][0] #Sorted by date/time
             next_inbound_arrival_time = next_inbound['attributes']['arrival_time']
@@ -141,7 +144,6 @@ class InfoGather():
             next_inbound = None
             next_inbound_arrival_time = None
             next_inbound_departure_time = None
-            inbound_prediction_data = None
         if next_inbound is not None:
             try:
                 inbound_prediction_data = next_inbound['relationships']['prediction']['data']
@@ -225,8 +227,8 @@ if __name__ == '__main__':
             NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT = ig.get_current_schedule(route_id, stop2)
             if (OLD_MH_NIAT != MH_NIAT or OLD_MH_NOAT != MH_NOAT or OLD_NS_NODT != NS_NODT):
                 logger.debug("Screen refresh activated")
-        except Exception as err:
-            logger.error("There was an exception with the connection: {0}").format(err)
+        except requests.exceptions.RequestException as err:
+            logger.error("There was an exception with the connection: %s", err)
         logger.info("%s: %s", stop1_name, ' '.join(map(str, [MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT])))
         logger.info("%s: %s", stop2_name, ' '.join(map(str, [NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT])))
         OLD_MH_NIAT = MH_NIAT

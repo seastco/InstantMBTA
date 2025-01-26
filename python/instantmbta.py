@@ -2,23 +2,83 @@ import argparse
 import time
 import logging
 import logging.handlers
-from inkytrain import InkyTrain
+import platform
 from infogather import InfoGather
+import requests
+# Conditional import for Raspberry Pi (ARM7l or AARCH64)
+if platform.machine() in ('armv7l', 'aarch64'):
+    from inkytrain import InkyTrain
+else:
+    InkyTrain = None
 
+# Configuration Constants
 LOG_FILENAME = 'instant.log'
-WAIT_TIME_BETWEEN_CHECKS = 120 #seconds
+WAIT_TIME_BETWEEN_CHECKS = 120  # seconds
+LOG_MAX_BYTES = 2097152  # 2MB
+LOG_BACKUP_COUNT = 5
+LOG_FORMAT = '%(asctime)s:%(name)s:%(levelname)s: %(message)s'
 
 """
 Main class to execute and continuously keep the
 Inky e-ink display up-to-date
 """
+def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, stop2_name, logger):
+    """Main loop to update the display with transit information."""
+    old_times = {
+        'stop1': {'niat': None, 'noat': None, 'nidt': None, 'nodt': None},
+        'stop2': {'nodt': None}
+    }
+    current_times = {
+        'stop1': {'niat': None, 'noat': None, 'nidt': None, 'nodt': None},
+        'stop2': {'niat': None, 'noat': None, 'nidt': None, 'nodt': None}
+    }
+    
+    while True:
+        try:
+            # Get updated schedules
+            (current_times['stop1']['niat'], current_times['stop1']['noat'], 
+             current_times['stop1']['nidt'], current_times['stop1']['nodt']) = ig.get_current_schedule(route_id, stop1)
+            
+            (current_times['stop2']['niat'], current_times['stop2']['noat'],
+             current_times['stop2']['nidt'], current_times['stop2']['nodt']) = ig.get_current_schedule(route_id, stop2)
+
+            # Check if display needs updating
+            if (old_times['stop1']['niat'] != current_times['stop1']['niat'] or
+                old_times['stop1']['noat'] != current_times['stop1']['noat'] or
+                old_times['stop2']['nodt'] != current_times['stop2']['nodt']):
+                if (it is not None):
+                    it.draw_inbound_outbound(
+                        route_name, stop1_name, stop2_name,
+                        current_times['stop1']['nidt'], current_times['stop1']['noat'],
+                    current_times['stop2']['niat'], current_times['stop2']['nodt']
+                )
+
+        except (requests.exceptions.RequestException, IOError) as err:
+            logger.exception(err)
+            time.sleep(WAIT_TIME_BETWEEN_CHECKS)
+            continue
+
+        # Log current times
+        logger.info("%s: %s", stop1_name, ' '.join(map(str, [
+            current_times['stop1']['niat'], current_times['stop1']['noat'],
+            current_times['stop1']['nidt'], current_times['stop1']['nodt']])))
+        logger.info("%s: %s", stop2_name, ' '.join(map(str, [
+            current_times['stop2']['niat'], current_times['stop2']['noat'],
+            current_times['stop2']['nidt'], current_times['stop2']['nodt']])))
+
+        # Update old times
+        old_times['stop1'].update(current_times['stop1'])
+        old_times['stop2']['nodt'] = current_times['stop2']['nodt']
+        
+        time.sleep(WAIT_TIME_BETWEEN_CHECKS)
+
 if __name__ == '__main__':
 
     logger = logging.getLogger('instantLogger')
     logger.setLevel(logging.DEBUG)
     handler = logging.handlers.RotatingFileHandler(
-              LOG_FILENAME, maxBytes=2097152, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s: %(message)s')
+              LOG_FILENAME, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT)
+    formatter = logging.Formatter(LOG_FORMAT)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -41,30 +101,19 @@ if __name__ == '__main__':
     stop2_name = args.stop2name
 
     ig = InfoGather()
-    it = InkyTrain()
-
-    OLD_STOP1_NIAT = OLD_STOP1_NOAT = OLD_STOP1_NIDT = OLD_STOP1_NODT = OLD_STOP2_NODT = None
-    #niat = Next Inbound Arrival Time
-    #noat = Next Outbound Arrival Time
-    #nidt = Next Inbound Departure Time
-    #nodt = Next Outbound Departure Time
-    STOP1_NIAT = STOP1_NOAT = STOP1_NIDT = STOP1_NODT = None
-    STOP2_NIAT = STOP2_NOAT = STOP2_NIDT = STOP2_NODT = None
-    while True:
-        try:
-            STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT = ig.get_current_schedule(route_id, stop1)
-            STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT = ig.get_current_schedule(route_id, stop2)
-            if (OLD_STOP1_NIAT != STOP1_NIAT or OLD_STOP1_NOAT != STOP1_NOAT or OLD_STOP2_NODT != STOP2_NODT):
-                it.draw_inbound_outbound(route_name, stop1_name, stop2_name, STOP1_NIDT, STOP1_NOAT, STOP2_NIAT, STOP2_NODT)
-        except Exception as err:
-            logger.exception(err)
-            time.sleep(WAIT_TIME_BETWEEN_CHECKS) #seconds
-            continue
-        logger.info("%s: %s", stop1_name, ' '.join(map(str, [STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT])))
-        logger.info("%s: %s", stop2_name, ' '.join(map(str, [STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT])))
-        OLD_STOP1_NIAT = STOP1_NIAT
-        OLD_STOP1_NOAT = STOP1_NOAT
-        OLD_STOP1_NIDT = STOP1_NIDT
-        OLD_STOP1_NODT = STOP1_NODT
-        OLD_STOP2_NODT = STOP2_NODT
-        time.sleep(WAIT_TIME_BETWEEN_CHECKS) #seconds
+    it = InkyTrain() if platform.machine() in ('armv7l', 'aarch64') else None
+    
+    logger.info(f'System: {platform.machine()}')
+    logger.info('Starting InstantMBTA with:')
+    logger.info(f'Route: {route_name} ({route_id})')
+    logger.info(f'Stop 1: {stop1_name} ({stop1})')
+    logger.info(f'Stop 2: {stop2_name} ({stop2})')
+    logger.info(f'Display enabled: {it is not None}')
+    
+    try:
+        run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, stop2_name, logger)
+    except KeyboardInterrupt:
+        logger.info('Shutting down InstantMBTA')
+    except Exception as e:
+        logger.exception('Unexpected error occurred:')
+        raise
