@@ -5,7 +5,7 @@ import logging.handlers
 import platform
 from infogather import InfoGather
 import requests
-# Conditional import for Raspberry Pi (ARM7l or AARCH64)
+# Conditional import for Raspberry Pi Architectures
 if platform.machine() in ('armv7l', 'armv61', 'aarch64'):
     from inkytrain import InkyTrain
 else:
