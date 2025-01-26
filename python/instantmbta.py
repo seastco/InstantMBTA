@@ -5,8 +5,11 @@ import logging.handlers
 import platform
 from infogather import InfoGather
 import requests
+
+PI_PLATFORMS = ("armv7l", "armv6l", "aarch64")
+
 # Conditional import for Raspberry Pi Architectures
-if platform.machine() in ('armv7l', 'armv61', 'aarch64'):
+if platform.machine() in PI_PLATFORMS:
     from inkytrain import InkyTrain
 else:
     InkyTrain = None
@@ -101,7 +104,7 @@ if __name__ == '__main__':
     stop2_name = args.stop2name
 
     ig = InfoGather()
-    it = InkyTrain() if platform.machine() in ('armv7l', 'armv61', 'aarch64') else None
+    it = InkyTrain() if platform.machine() in PI_PLATFORMS else None
     
     logger.info(f'System: {platform.machine()}')
     logger.info('Starting InstantMBTA with:')
