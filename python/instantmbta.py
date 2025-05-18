@@ -11,8 +11,9 @@ PI_PLATFORMS = ("armv7l", "armv6l", "aarch64")
 # Conditional import for Raspberry Pi Architectures
 if platform.machine() in PI_PLATFORMS:
     from inkytrain import InkyTrain
+    inky_train_cls = InkyTrain
 else:
-    InkyTrain = None
+    inky_train_cls = None
 
 # Configuration Constants
 LOG_FILENAME = 'instant.log'
@@ -20,6 +21,21 @@ WAIT_TIME_BETWEEN_CHECKS = 120  # seconds
 LOG_MAX_BYTES = 2097152  # 2MB
 LOG_BACKUP_COUNT = 5
 LOG_FORMAT = '%(asctime)s:%(name)s:%(levelname)s: %(message)s'
+
+def setup_logging(log_to_console=True, log_level=logging.INFO):
+    """Set up and return the main logger for InstantMBTA with the specified output and log level."""
+    main_logger = logging.getLogger("instantmbta")
+    main_logger.setLevel(log_level)
+    formatter = logging.Formatter(LOG_FORMAT)
+    if log_to_console:
+        handler = logging.StreamHandler()
+    else:
+        handler = logging.handlers.RotatingFileHandler(
+            LOG_FILENAME, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT)
+    handler.setFormatter(formatter)
+    main_logger.handlers.clear()  # Avoid duplicate logs
+    main_logger.addHandler(handler)
+    return main_logger
 
 """
 Main class to execute and continuously keep the
@@ -77,14 +93,6 @@ def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, sto
 
 if __name__ == '__main__':
 
-    logger = logging.getLogger('instantLogger')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.handlers.RotatingFileHandler(
-              LOG_FILENAME, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT)
-    formatter = logging.Formatter(LOG_FORMAT)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
     parser = argparse.ArgumentParser(epilog="For routename, stop1name and stop2name,\
         encapsulate in quotes if name has spaces. (e.g. \"A Place\") \
         See https://www.mbta.com/developers/v3-api for more information \
@@ -95,6 +103,8 @@ if __name__ == '__main__':
     parser.add_argument("stop1name", help="Human friendly name for stop1 being displayed")
     parser.add_argument("stop2id", help="Stop ID for second stop to display")
     parser.add_argument("stop2name", help="Human friendly name for stop2 being displayed")
+    parser.add_argument("--once", action="store_true", help="Run once instead of continuously")
+    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], help="Set the logging level")
     args = parser.parse_args()
     route_id = args.routeid
     route_name = args.routename
@@ -103,18 +113,34 @@ if __name__ == '__main__':
     stop2 = args.stop2id
     stop2_name = args.stop2name
 
+    log_level = getattr(logging, args.log_level.upper(), logging.INFO)
+    logger = setup_logging(log_to_console=args.once, log_level=log_level)
+
     ig = InfoGather()
-    it = InkyTrain() if platform.machine() in PI_PLATFORMS else None
+    it = inky_train_cls() if inky_train_cls is not None else None
     
-    logger.info(f'System: {platform.machine()}')
+    logger.info('System: %s', platform.machine())
     logger.info('Starting InstantMBTA with:')
-    logger.info(f'Route: {route_name} ({route_id})')
-    logger.info(f'Stop 1: {stop1_name} ({stop1})')
-    logger.info(f'Stop 2: {stop2_name} ({stop2})')
-    logger.info(f'Display enabled: {it is not None}')
+    logger.info('Route: %s (%s)', route_name, route_id)
+    logger.info('Stop 1: %s (%s)', stop1_name, stop1)
+    logger.info('Stop 2: %s (%s)', stop2_name, stop2)
+    logger.info('Display enabled: %s', it is not None)
     
     try:
-        run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, stop2_name, logger)
+        if args.once:
+            # Run once
+            STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT = ig.get_current_schedule(route_id, stop1)
+            STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT = ig.get_current_schedule(route_id, stop2)
+            if it is not None:
+                it.draw_inbound_outbound(
+                    route_name, stop1_name, stop2_name,
+                    STOP1_NIDT, STOP1_NOAT, STOP2_NIAT, STOP2_NODT
+                )
+            logger.info("%s: %s", stop1_name, ' '.join(map(str, [STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT])))
+            logger.info("%s: %s", stop2_name, ' '.join(map(str, [STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT])))
+        else:
+            # Run continuously
+            run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, stop2_name, logger)
     except KeyboardInterrupt:
         logger.info('Shutting down InstantMBTA')
     except Exception as e:

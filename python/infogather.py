@@ -8,6 +8,34 @@ import logging.handlers
 import requests
 import secret_constants
 
+class CircuitBreaker:
+    def __init__(self, failure_threshold=5, reset_timeout=60):
+        self.failure_threshold = failure_threshold
+        self.reset_timeout = reset_timeout
+        self.failures = 0
+        self.last_failure_time = None
+        self.state = "CLOSED"  # CLOSED, OPEN, or HALF-OPEN
+
+    def execute(self, func, *args, **kwargs):
+        if self.state == "OPEN":
+            if time.time() - self.last_failure_time > self.reset_timeout:
+                self.state = "HALF-OPEN"
+            else:
+                raise Exception("Circuit breaker is OPEN")
+
+        try:
+            result = func(*args, **kwargs)
+            if self.state == "HALF-OPEN":
+                self.state = "CLOSED"
+                self.failures = 0
+            return result
+        except Exception as e:
+            self.failures += 1
+            self.last_failure_time = time.time()
+            if self.failures >= self.failure_threshold:
+                self.state = "OPEN"
+            raise e
+
 API_REQUEST = "api_key="+secret_constants.API_KEY
 API_URL = "https://api-v3.mbta.com"
 """
@@ -32,27 +60,35 @@ class InfoGather():
     """
 
     def __init__(self):
-        self.logger = logging.getLogger('MainLogger')
+        self.logger = logging.getLogger('instantmbta.infogather')
+        self.circuit_breaker = CircuitBreaker()
 
+    def _make_api_request(self, request_string):
+        """Make an API request with circuit breaker protection"""
+        def _request():
+            return requests.get(request_string, timeout=STANDARD_TIMEOUT)
+        
+        try:
+            return self.circuit_breaker.execute(_request)
+        except Exception as e:
+            self.logger.error("Circuit breaker prevented request: %s", e)
+            raise
 
     def get_line(self, line_name):
         """
         Get information for a specific line
         """
         request_string = API_URL+'/lines/'+line_name+'?'+API_REQUEST
-        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
         self.logger.debug("Getting Line Information %s", request_string)
-        return r
-
+        return self._make_api_request(request_string)
 
     def get_routes(self, get_route_id):
         """
         Get information for a specific route
         """
         request_string = API_URL+'/routes/'+get_route_id+'?'+API_REQUEST
-        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
         self.logger.debug("Getting Route Information %s", request_string)
-        return r
+        return self._make_api_request(request_string)
 
     def get_schedule(self, get_route_id, stop_id, direction_id):
         """
@@ -62,8 +98,7 @@ class InfoGather():
         request_string = API_URL+'/schedules?include=stop,prediction&filter[route]='+\
             get_route_id+'&filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&sort=departure_time&filter[min_time]='+hh_mm+'&'+API_REQUEST
         self.logger.debug("Getting schedule %s", request_string)
-        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
-        return r
+        return self._make_api_request(request_string)
 
     def get_predictions(self, stop_id, direction_id):
         """
@@ -72,20 +107,28 @@ class InfoGather():
         """
         request_string = API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST
         self.logger.debug("Getting predictions %s", request_string)
-        r = requests.get(request_string, timeout=STANDARD_TIMEOUT)
-        return r
+        return self._make_api_request(request_string)
 
     def find_prediction_by_id(self, prediction_id, predictions):
         """
-        Given a prediction ID, find the prediction in a list of prediction data
-        This is silly because you can't query predictions based on their ID
-        even though that's the only thing contained in the schedule/prediction relationship
+        Given a prediction ID, find the prediction in a list of prediction data using dictionary lookup.
+        
+        Args:
+            prediction_id (str): The ID of the prediction to find
+            predictions (dict): The predictions data from the API
+            
+        Returns:
+            dict: The matching prediction or None if not found
         """
-        prediction = None
-        for prediction in predictions['data']:
-            if prediction['id'] == prediction_id:
-                return prediction
-        self.logger.error("There should have been a prediction found, but there wasn't.")
+        # Create a dictionary mapping prediction IDs to their data
+        prediction_map = {pred['id']: pred for pred in predictions['data']}
+        
+        # Look up the prediction directly
+        prediction = prediction_map.get(prediction_id)
+        
+        if prediction is None:
+            self.logger.error("No prediction found for ID: %s", prediction_id)
+        
         return prediction
 
     def get_stops(self, for_route_id):
