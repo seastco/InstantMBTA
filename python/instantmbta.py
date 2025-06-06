@@ -52,6 +52,10 @@ def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, sto
         'stop2': {'niat': None, 'noat': None, 'nidt': None, 'nodt': None}
     }
     
+    consecutive_failures = 0
+    max_consecutive_failures = 3
+    base_wait_time = WAIT_TIME_BETWEEN_CHECKS
+    
     while True:
         try:
             # Get updated schedules
@@ -61,6 +65,9 @@ def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, sto
             (current_times['stop2']['niat'], current_times['stop2']['noat'],
              current_times['stop2']['nidt'], current_times['stop2']['nodt']) = ig.get_current_schedule(route_id, stop2)
 
+            # Reset failure counter on success
+            consecutive_failures = 0
+
             # Check if display needs updating
             if (old_times['stop1']['niat'] != current_times['stop1']['niat'] or
                 old_times['stop1']['noat'] != current_times['stop1']['noat'] or
@@ -69,12 +76,21 @@ def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, sto
                     it.draw_inbound_outbound(
                         route_name, stop1_name, stop2_name,
                         current_times['stop1']['nidt'], current_times['stop1']['noat'],
-                    current_times['stop2']['niat'], current_times['stop2']['nodt']
-                )
+                        current_times['stop2']['niat'], current_times['stop2']['nodt']
+                    )
 
         except (requests.exceptions.RequestException, IOError) as err:
-            logger.exception(err)
-            time.sleep(WAIT_TIME_BETWEEN_CHECKS)
+            consecutive_failures += 1
+            logger.exception("Network error occurred (attempt %d/%d): %s", 
+                           consecutive_failures, max_consecutive_failures, err)
+            
+            # Calculate wait time with exponential backoff
+            wait_time = min(base_wait_time * (2 ** (consecutive_failures - 1)), 300)  # Cap at 5 minutes
+            
+            if consecutive_failures >= max_consecutive_failures:
+                logger.error("Maximum consecutive failures reached. Waiting %d seconds before retry.", wait_time)
+            
+            time.sleep(wait_time)
             continue
 
         # Log current times

@@ -62,17 +62,52 @@ class InfoGather():
     def __init__(self):
         self.logger = logging.getLogger('instantmbta.infogather')
         self.circuit_breaker = CircuitBreaker()
+        self.last_successful_request = None
+        self.consecutive_failures = 0
+        self.max_retries = 5
+        self.base_retry_delay = 5  # seconds
+
+    def verify_connection(self):
+        """Verify connection to the MBTA API"""
+        try:
+            # Simple request to check connectivity
+            test_request = API_URL + '/routes?' + API_REQUEST
+            response = requests.get(test_request, timeout=STANDARD_TIMEOUT)
+            response.raise_for_status()
+            self.last_successful_request = time.time()
+            self.consecutive_failures = 0
+            return True
+        except requests.exceptions.RequestException as e:
+            self.logger.warning("Connection verification failed: %s", e)
+            self.consecutive_failures += 1
+            return False
 
     def _make_api_request(self, request_string):
-        """Make an API request with circuit breaker protection"""
+        """Make an API request with circuit breaker protection and retry logic"""
         def _request():
             return requests.get(request_string, timeout=STANDARD_TIMEOUT)
         
-        try:
-            return self.circuit_breaker.execute(_request)
-        except Exception as e:
-            self.logger.error("Circuit breaker prevented request: %s", e)
-            raise
+        retry_delay = self.base_retry_delay
+        
+        for attempt in range(self.max_retries):
+            try:
+                if not self.verify_connection():
+                    if attempt < self.max_retries - 1:
+                        self.logger.info("Waiting %d seconds before retry %d/%d", 
+                                       retry_delay, attempt + 1, self.max_retries)
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
+                    else:
+                        raise Exception("Max retries exceeded")
+                
+                return self.circuit_breaker.execute(_request)
+            except Exception as e:
+                if attempt == self.max_retries - 1:
+                    self.logger.error("Circuit breaker prevented request after %d retries: %s", 
+                                    self.max_retries, e)
+                    raise
+                retry_delay *= 2  # Exponential backoff
 
     def get_line(self, line_name):
         """
