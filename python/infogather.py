@@ -288,8 +288,10 @@ if __name__ == '__main__':
                 logger.debug("Screen refresh activated")
         except requests.exceptions.RequestException as err:
             logger.error("There was an exception with the connection: %s", err)
-        logger.info("%s: %s", stop1_name, ' '.join(map(str, [MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT])))
-        logger.info("%s: %s", stop2_name, ' '.join(map(str, [NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT])))
+        logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
+                   stop1_name, MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT)
+        logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
+                   stop2_name, NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT)
         OLD_MH_NIAT = MH_NIAT
         OLD_MH_NOAT = MH_NOAT
         OLD_MH_NIDT = MH_NIDT
