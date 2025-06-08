@@ -180,86 +180,67 @@ class InfoGather():
         current_time = datetime.now().strftime('%H:%M')
         return current_time
 
-    def get_current_schedule(self, a_route_id, stop_id):
-        """
-        Get the current schedule given a route id and stop id
-        It will first get the schedule and then see if there are any predictions.
-        If there are predictions for the route and stop it will choose the prediction over
-        the original schedule.
-        If there is neither a scheduled time in the same day nor a prediction,
-        it will return None for that specific entry
+    def get_current_schedule(self, route_id, stop_id):
+        """Get current schedule for a route and stop."""
+        try:
+            # Get predicted times
+            response = self._make_api_request(
+                f"{API_URL}/predictions?filter[route]={route_id}&filter[stop]={stop_id}&sort=departure_time&{API_REQUEST}"
+            )
+            
+            if response is None:
+                self.logger.error(f"Failed to get predicted times for route {route_id} at stop {stop_id}")
+                return None, None, None, None
+                
+            outbound_predicted_time_json = response.json()
+            self.logger.debug(f"Predicted times response: {outbound_predicted_time_json}")
+            
+            # Get scheduled times
+            response = self._make_api_request(
+                f"{API_URL}/schedules?filter[route]={route_id}&filter[stop]={stop_id}&sort=departure_time&{API_REQUEST}"
+            )
+            
+            if response is None:
+                self.logger.error(f"Failed to get scheduled times for route {route_id} at stop {stop_id}")
+                return None, None, None, None
+                
+            outbound_scheduled_time_json = response.json()
+            self.logger.debug(f"Scheduled times response: {outbound_scheduled_time_json}")
 
-        The closest time is that which is used.
-        route_id: The ID of the route
-        stop_id: The ID of the stop
-
-        Returns
-        next_inbound_arrival_time, 
-        next_outbound_arrival_time, 
-        next_inbound_departure_time, 
-        next_outbound_departure_time
-        """
-        self.logger.info("Getting schedule for %s", ' '.join(map(str, [a_route_id, stop_id])))
-        outbound_r = self.get_schedule(a_route_id, stop_id, OUTBOUND)
-        outbound_json = outbound_r.json()
-        outbound_predicted_data = None  # Initialize here
-        if len(outbound_json['data']) > 0:
-            next_outbound = outbound_json['data'][0] #Sorted by date/time
-            next_outbound_arrival_time = next_outbound['attributes']['arrival_time']
-            next_outbound_departure_time = next_outbound['attributes']['departure_time']
-        else:
-            next_outbound = None
-            next_outbound_arrival_time = None
-            next_outbound_departure_time = None
-        inbound_r = self.get_schedule(a_route_id, stop_id, INBOUND)
-        inbound_json = inbound_r.json()
-        inbound_prediction_data = None  # Initialize here
-        if len(inbound_json['data']) > 0:
-            next_inbound = inbound_json['data'][0] #Sorted by date/time
-            next_inbound_arrival_time = next_inbound['attributes']['arrival_time']
-            next_inbound_departure_time = next_inbound['attributes']['departure_time']
-        else:
-            next_inbound = None
-            next_inbound_arrival_time = None
+            # Process predicted times
             next_inbound_departure_time = None
-        if next_inbound is not None:
-            try:
-                inbound_prediction_data = next_inbound['relationships']['prediction']['data']
-            except KeyError:
-                inbound_prediction_data = None
-        if inbound_prediction_data is not None:
-            inbound_predicted_time_id = inbound_prediction_data['id']
-            predictions_inbound = self.get_predictions(stop_id, INBOUND).json()
-            inbound_predicted_time_json = self.find_prediction_by_id(inbound_predicted_time_id, predictions_inbound)
-            if 'attributes' in inbound_predicted_time_json:
-                inbound_predicted_time_arr = inbound_predicted_time_json['attributes']['arrival_time']
-                inbound_predicted_time_dep = inbound_predicted_time_json['attributes']['departure_time']
-                next_inbound_arrival_time = inbound_predicted_time_arr
-                next_inbound_departure_time = inbound_predicted_time_dep
-            else:
-                self.logger.error("Unable to find predictions by id for inbound predictions.")
-        else:
-            self.logger.info("No inbound prediction available for %s", stop_id)
-        if next_outbound is not None:
-            try:
-                outbound_predicted_data = next_outbound['relationships']['prediction']['data']
-            except KeyError:
-                outbound_predicted_data = None
-        if outbound_predicted_data is not None:
-            outbound_predicted_time_id = outbound_predicted_data['id']
-            predictions_outbound = self.get_predictions(stop_id, OUTBOUND).json()
-            outbound_predicted_time_json = self.find_prediction_by_id(outbound_predicted_time_id, predictions_outbound)
-            if 'attributes' in outbound_predicted_time_json:
-                outbound_predicted_time_arr = outbound_predicted_time_json['attributes']['arrival_time']
-                outbound_predicted_time_dep = outbound_predicted_time_json['attributes']['departure_time']
-                next_outbound_arrival_time = outbound_predicted_time_arr
-                next_outbound_departure_time = outbound_predicted_time_dep
-            else:
-                self.logger.error("Unable to find predictions by id for outbound predictions.")
-        else:
-            self.logger.info("No outbound prediction available for %s", stop_id)
+            next_outbound_departure_time = None
+            
+            if 'data' in outbound_predicted_time_json:
+                for prediction in outbound_predicted_time_json['data']:
+                    if 'attributes' in prediction:
+                        if prediction['attributes'].get('direction_id') == 0:  # Inbound
+                            if next_inbound_departure_time is None:
+                                next_inbound_departure_time = prediction['attributes'].get('departure_time')
+                        else:  # Outbound
+                            if next_outbound_departure_time is None:
+                                next_outbound_departure_time = prediction['attributes'].get('departure_time')
 
-        return next_inbound_arrival_time, next_outbound_arrival_time, next_inbound_departure_time, next_outbound_departure_time
+            # Process scheduled times
+            next_inbound_scheduled_time = None
+            next_outbound_scheduled_time = None
+            
+            if 'data' in outbound_scheduled_time_json:
+                for schedule in outbound_scheduled_time_json['data']:
+                    if 'attributes' in schedule:
+                        if schedule['attributes'].get('direction_id') == 0:  # Inbound
+                            if next_inbound_scheduled_time is None:
+                                next_inbound_scheduled_time = schedule['attributes'].get('departure_time')
+                        else:  # Outbound
+                            if next_outbound_scheduled_time is None:
+                                next_outbound_scheduled_time = schedule['attributes'].get('departure_time')
+
+            return (next_inbound_scheduled_time, next_inbound_departure_time,
+                    next_outbound_scheduled_time, next_outbound_departure_time)
+                    
+        except Exception as e:
+            self.logger.error(f"Error getting schedule for route {route_id} at stop {stop_id}: {str(e)}")
+            return None, None, None, None
 
 if __name__ == '__main__':
 
