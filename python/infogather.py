@@ -262,6 +262,7 @@ if __name__ == '__main__':
     parser.add_argument("stop1name", help="Human friendly name for stop1 being displayed")
     parser.add_argument("stop2id", help="Stop ID for second stop to display")
     parser.add_argument("stop2name", help="Human friendly name for stop2 being displayed")
+    parser.add_argument("--once", action="store_true", help="Run the script once instead of continuously")
     args = parser.parse_args()
     route_id = args.routeid
     route_name = args.routename
@@ -297,4 +298,8 @@ if __name__ == '__main__':
         OLD_MH_NIDT = MH_NIDT
         OLD_MH_NODT = MH_NODT
         OLD_NS_NODT = NS_NODT
+        
+        if args.once:
+            break
+            
         time.sleep(UPDATE_INTERVAL_SECONDS) #seconds
