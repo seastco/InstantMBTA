@@ -94,12 +94,10 @@ def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, sto
             continue
 
         # Log current times
-        logger.info("%s: %s", stop1_name, ' '.join(map(str, [
-            current_times['stop1']['niat'], current_times['stop1']['noat'],
-            current_times['stop1']['nidt'], current_times['stop1']['nodt']])))
-        logger.info("%s: %s", stop2_name, ' '.join(map(str, [
-            current_times['stop2']['niat'], current_times['stop2']['noat'],
-            current_times['stop2']['nidt'], current_times['stop2']['nodt']])))
+        logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
+                   stop1_name, current_times['stop1']['niat'], current_times['stop1']['noat'], current_times['stop1']['nidt'], current_times['stop1']['nodt'])
+        logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
+                   stop2_name, current_times['stop2']['niat'], current_times['stop2']['noat'], current_times['stop2']['nidt'], current_times['stop2']['nodt'])
 
         # Update old times
         old_times['stop1'].update(current_times['stop1'])
@@ -152,8 +150,10 @@ if __name__ == '__main__':
                     route_name, stop1_name, stop2_name,
                     STOP1_NIDT, STOP1_NOAT, STOP2_NIAT, STOP2_NODT
                 )
-            logger.info("%s: %s", stop1_name, ' '.join(map(str, [STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT])))
-            logger.info("%s: %s", stop2_name, ' '.join(map(str, [STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT])))
+            logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
+                       stop1_name, STOP1_NIAT, STOP1_NOAT, STOP1_NIDT, STOP1_NODT)
+            logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
+                       stop2_name, STOP2_NIAT, STOP2_NOAT, STOP2_NIDT, STOP2_NODT)
         else:
             # Run continuously
             run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, stop2_name, logger)
