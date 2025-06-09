@@ -40,7 +40,7 @@ class TestInstantMBTA(unittest.TestCase):
                 pass
 
         # Verify display was updated
-        self.it.display_information.assert_called_once()
+        self.it.draw_inbound_outbound.assert_called_once()
         self.assertEqual(self.ig.get_current_schedule.call_count, 2)
 
     def test_network_error_handling(self):
@@ -97,7 +97,7 @@ class TestInstantMBTA(unittest.TestCase):
         self.assertGreater(self.logger.error.call_count, 1)
         
         # Verify display was not updated
-        self.it.display_information.assert_not_called()
+        self.it.draw_inbound_outbound.assert_not_called()
 
     def test_display_update_conditions(self):
         """Test conditions that trigger display updates."""
@@ -124,7 +124,7 @@ class TestInstantMBTA(unittest.TestCase):
                 pass
 
         # Verify display was only updated once
-        self.assertEqual(self.it.display_information.call_count, 1)
+        self.assertEqual(self.it.draw_inbound_outbound.call_count, 1)
 
 if __name__ == '__main__':
     unittest.main() 

@@ -81,7 +81,7 @@ def run_display_loop(ig, it, route_id, route_name, stop1, stop1_name, stop2, sto
 
         except (requests.exceptions.RequestException, IOError) as err:
             consecutive_failures += 1
-            logger.exception("Network error occurred (attempt %d/%d): %s", 
+            logger.error("Network error occurred (attempt %d/%d): %s", 
                            consecutive_failures, max_consecutive_failures, err)
             
             # Calculate wait time with exponential backoff

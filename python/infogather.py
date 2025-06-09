@@ -183,6 +183,9 @@ class InfoGather():
     def get_current_schedule(self, route_id, stop_id):
         """Get current schedule for a route and stop."""
         try:
+            current_time = datetime.now().astimezone()
+            current_date = current_time.date()
+            
             # Get predicted times
             response = self._make_api_request(
                 f"{API_URL}/predictions?filter[route]={route_id}&filter[stop]={stop_id}&sort=departure_time&{API_REQUEST}"
@@ -214,12 +217,16 @@ class InfoGather():
             if 'data' in outbound_predicted_time_json:
                 for prediction in outbound_predicted_time_json['data']:
                     if 'attributes' in prediction:
-                        if prediction['attributes'].get('direction_id') == 0:  # Inbound
-                            if next_inbound_departure_time is None:
-                                next_inbound_departure_time = prediction['attributes'].get('departure_time')
-                        else:  # Outbound
-                            if next_outbound_departure_time is None:
-                                next_outbound_departure_time = prediction['attributes'].get('departure_time')
+                        departure_time = prediction['attributes'].get('departure_time')
+                        if departure_time:
+                            dt = datetime.fromisoformat(departure_time)
+                            if dt > current_time and dt.date() == current_date:
+                                if prediction['attributes'].get('direction_id') == 0:  # Inbound
+                                    if next_inbound_departure_time is None:
+                                        next_inbound_departure_time = departure_time
+                                else:  # Outbound
+                                    if next_outbound_departure_time is None:
+                                        next_outbound_departure_time = departure_time
 
             # Process scheduled times
             next_inbound_scheduled_time = None
@@ -228,12 +235,16 @@ class InfoGather():
             if 'data' in outbound_scheduled_time_json:
                 for schedule in outbound_scheduled_time_json['data']:
                     if 'attributes' in schedule:
-                        if schedule['attributes'].get('direction_id') == 0:  # Inbound
-                            if next_inbound_scheduled_time is None:
-                                next_inbound_scheduled_time = schedule['attributes'].get('departure_time')
-                        else:  # Outbound
-                            if next_outbound_scheduled_time is None:
-                                next_outbound_scheduled_time = schedule['attributes'].get('departure_time')
+                        departure_time = schedule['attributes'].get('departure_time')
+                        if departure_time:
+                            dt = datetime.fromisoformat(departure_time)
+                            if dt > current_time and dt.date() == current_date:
+                                if schedule['attributes'].get('direction_id') == 0:  # Inbound
+                                    if next_inbound_scheduled_time is None:
+                                        next_inbound_scheduled_time = departure_time
+                                else:  # Outbound
+                                    if next_outbound_scheduled_time is None:
+                                        next_outbound_scheduled_time = departure_time
 
             return (next_inbound_scheduled_time, next_inbound_departure_time,
                     next_outbound_scheduled_time, next_outbound_departure_time)

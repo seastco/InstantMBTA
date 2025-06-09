@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from PIL import Image, ImageFont, ImageDraw
 from font_hanken_grotesk import HankenGroteskBold, HankenGroteskMedium
 from inky.auto import auto
@@ -34,26 +34,22 @@ class InkyTrain():
         img = Image.new("P", (self.inky_display.WIDTH, self.inky_display.HEIGHT))
         draw = ImageDraw.Draw(img)
         
-        if s1_next_inbound_str is not None:
-            s1_next_inbound_dt = datetime.fromisoformat(s1_next_inbound_str)
-            s1_next_inbound = s1_next_inbound_dt.strftime("%I:%M%p")
-        else:
-            s1_next_inbound = "Later"
-        if s1_next_outbound_str is not None:    
-            s1_next_outbound_dt = datetime.fromisoformat(s1_next_outbound_str)
-            s1_next_outbound = s1_next_outbound_dt.strftime("%I:%M%p")
-        else:
-            s1_next_outbound = "Later"
-        if s2_next_inbound_str is not None:
-            s2_next_inbound_dt = datetime.fromisoformat(s2_next_inbound_str)
-            s2_next_inbound = s2_next_inbound_dt.strftime("%I:%M%p")
-        else:
-            s2_next_inbound = "Later"
-        if s2_next_outbound_str is not None:
-            s2_next_outbound_dt = datetime.fromisoformat(s2_next_outbound_str)
-            s2_next_outbound = s2_next_outbound_dt.strftime("%I:%M%p")
-        else:
-            s2_next_outbound = "Later"
+        def format_time(time_str):
+            if time_str is None:
+                return "Later"
+            # Parse the ISO format time and convert to local timezone
+            dt = datetime.fromisoformat(time_str)
+            if dt.tzinfo is None:
+                # If no timezone info, assume UTC
+                dt = dt.replace(tzinfo=timezone.utc)
+            # Convert to local time
+            local_dt = dt.astimezone()
+            return local_dt.strftime("%I:%M%p")
+        
+        s1_next_inbound = format_time(s1_next_inbound_str)
+        s1_next_outbound = format_time(s1_next_outbound_str)
+        s2_next_inbound = format_time(s2_next_inbound_str)
+        s2_next_outbound = format_time(s2_next_outbound_str)
 
         font_times = ImageFont.truetype(HankenGroteskMedium, 18)
         font_stop_name = ImageFont.truetype(HankenGroteskBold, 20)
