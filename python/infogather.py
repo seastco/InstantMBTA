@@ -246,7 +246,7 @@ class InfoGather():
                                     if next_outbound_scheduled_time is None:
                                         next_outbound_scheduled_time = departure_time
 
-            return (next_inbound_scheduled_time, next_inbound_departure_time,
+            return (next_inbound_departure_time, next_inbound_scheduled_time,
                     next_outbound_scheduled_time, next_outbound_departure_time)
                     
         except Exception as e:
