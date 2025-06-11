@@ -213,20 +213,27 @@ class InfoGather():
             # Process predicted times
             next_inbound_departure_time = None
             next_outbound_departure_time = None
+            next_inbound_arrival_time = None
+            next_outbound_arrival_time = None
             
             if 'data' in outbound_predicted_time_json:
                 for prediction in outbound_predicted_time_json['data']:
                     if 'attributes' in prediction:
                         departure_time = prediction['attributes'].get('departure_time')
-                        if departure_time:
-                            dt = datetime.fromisoformat(departure_time)
+                        arrival_time = prediction['attributes'].get('arrival_time')
+                        if departure_time or arrival_time:
+                            dt = datetime.fromisoformat(departure_time or arrival_time)
                             if dt > current_time and dt.date() == current_date:
                                 if prediction['attributes'].get('direction_id') == 0:  # Inbound
                                     if next_inbound_departure_time is None:
-                                        next_inbound_departure_time = departure_time
+                                        next_inbound_departure_time = departure_time or arrival_time
+                                    if next_inbound_arrival_time is None:
+                                        next_inbound_arrival_time = arrival_time
                                 else:  # Outbound
                                     if next_outbound_departure_time is None:
-                                        next_outbound_departure_time = departure_time
+                                        next_outbound_departure_time = departure_time or arrival_time
+                                    if next_outbound_arrival_time is None:
+                                        next_outbound_arrival_time = arrival_time
 
             # Process scheduled times
             next_inbound_scheduled_time = None
@@ -246,8 +253,14 @@ class InfoGather():
                                     if next_outbound_scheduled_time is None:
                                         next_outbound_scheduled_time = departure_time
 
-            return (next_inbound_departure_time, next_inbound_scheduled_time,
-                    next_outbound_scheduled_time, next_outbound_departure_time)
+            # Use arrival time as departure time if no departure time is available
+            if next_inbound_departure_time is None and next_inbound_arrival_time is not None:
+                next_inbound_departure_time = next_inbound_arrival_time
+            if next_outbound_departure_time is None and next_outbound_arrival_time is not None:
+                next_outbound_departure_time = next_outbound_arrival_time
+
+            return (next_inbound_arrival_time, next_outbound_arrival_time,
+                    next_inbound_departure_time, next_outbound_departure_time)
                     
         except Exception as e:
             self.logger.error(f"Error getting schedule for route {route_id} at stop {stop_id}: {str(e)}")
