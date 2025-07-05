@@ -6,7 +6,7 @@ import time
 import logging
 import logging.handlers
 import requests
-import secret_constants
+from . import secret_constants
 
 class CircuitBreaker:
     def __init__(self, failure_threshold=5, reset_timeout=60):

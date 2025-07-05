@@ -3,8 +3,9 @@ import time
 import logging
 import logging.handlers
 import platform
-from infogather import InfoGather
 import requests
+from .infogather import InfoGather
+from .config_parser import ConfigParser
 
 PI_PLATFORMS = ("armv7l", "armv6l", "aarch64")
 
