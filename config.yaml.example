@@ -1,47 +1,36 @@
-# Example configuration file for InstantMBTA
-# Copy this to config.yaml and customize for your needs
+# InstantMBTA Configuration
+# Copy this file to config.yaml and customize for your needs
 
-# Example 1: Single station, multiple routes (Oak Grove)
-mode: station
-station: Oak Grove
+# Choose your display mode:
+# - single-station: Track any routes/directions at one station
+# - multi-station: Track your commute between two stations
 
-track:
-  - Orange Line:
-      direction: inbound
-      count: 2
+mode: single-station
+station: Park Street    # Use friendly names - automatically converted to IDs
+
+# For single-station mode: list routes to track
+routes:
+  # Route specific directions
+  - Red Line:
+      inbound: 2         # next 2 trains towards Alewife
+      outbound: 1        # next train towards Ashmont/Braintree
   
-  - Haverhill Line:
-      direction: inbound  
-      count: 1
+  # Or just one direction
+  - Green Line:
+      outbound: 3        # next 3 trains outbound
 
+# Display settings (all optional - these are defaults)
 display:
-  time_format: 12h
-  abbreviate: true
-  refresh: 60
+  time_format: 12h      # 12h or 24h
+  abbreviate: true      # RL instead of Red Line
+  refresh: 60           # seconds between updates
 
----
-# Example 2: Both directions at one station (Central Square)
-# mode: bidirectional
-# station: Central Square
-# route: Red Line
-# 
-# inbound:
-#   towards: Alewife
-#   show: 2
-# 
-# outbound:
-#   towards: Ashmont/Braintree
-#   show: 2
-# 
-# display:
-#   show_directions: true
-
----
-# Example 3: Classic journey mode (current behavior)
-# mode: journey
+# ---
+# Multi-station mode example (comment out above and uncomment below):
+# mode: multi-station
 # route: Red Line
 # from: Central Square
 # to: Harvard Square
 # 
 # display:
-#   show_route: true
+#   show_route: true      # Show "Red Line" at top

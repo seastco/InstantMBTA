@@ -60,7 +60,7 @@ Track multiple routes at your home station:
 mode: station
 station: Oak Grove
 
-track:
+routes:
   - Orange Line:
       direction: inbound
       count: 2

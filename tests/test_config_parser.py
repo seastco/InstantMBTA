@@ -1,150 +1,246 @@
-"""Integration test for config parser with real MBTA API."""
+"""Tests for the configuration parser."""
 
 import unittest
 import tempfile
 import yaml
-import sys
-import os
 from pathlib import Path
+from argparse import Namespace
+from instantmbta.config_parser import ConfigParser, Config
 
-# Add parent directory to path for imports
-#sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from instantmbta.config_parser import ConfigParser, Config, RouteConfig, DisplayConfig
-from instantmbta.infogather import InfoGather
-
-class TestConfigIntegration(unittest.TestCase):
-    """Test configuration with real API calls."""
-    
+class TestConfigParser(unittest.TestCase):
     def setUp(self):
         self.parser = ConfigParser()
-        self.ig = InfoGather()
         self.temp_dir = tempfile.TemporaryDirectory()
         self.temp_path = Path(self.temp_dir.name)
     
     def tearDown(self):
         self.temp_dir.cleanup()
     
-    def write_config(self, config_dict: dict) -> Path:
+    def write_config(self, filename: str, config_dict: dict) -> Path:
         """Helper to write a test config file."""
-        config_path = self.temp_path / 'test_config.yaml'
+        config_path = self.temp_path / filename
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f)
         return config_path
     
-    def test_oak_grove_multi_route(self):
-        """Test Oak Grove configuration with Orange Line."""
+    def test_single_station_mode_config(self):
+        """Test parsing single-station mode configuration."""
         config_dict = {
-            'mode': 'station',
+            'mode': 'single-station',
             'station': 'Oak Grove',
-            'track': [
-                {'Orange Line': {'direction': 'inbound', 'count': 2}}
+            'routes': [
+                {'Orange Line': {'inbound': 2}},
+                {'Haverhill Line': {'inbound': 1}}
+            ],
+            'display': {
+                'time_format': '12h',
+                'abbreviate': True,
+                'refresh': 60
+            }
+        }
+        
+        config_path = self.write_config('single_station_test.yaml', config_dict)
+        config = self.parser.parse_yaml(config_path)
+        
+        # Verify basic settings
+        self.assertEqual(config.mode, 'single-station')
+        self.assertEqual(config.station, 'Oak Grove')
+        self.assertEqual(config.station_id, 'place-ogmnl')
+        
+        # Verify routes
+        self.assertEqual(len(config.routes), 2)
+        
+        orange_route = config.routes[0]
+        self.assertEqual(orange_route.route_id, 'Orange')
+        self.assertEqual(orange_route.route_name, 'Orange Line')
+        self.assertEqual(orange_route.inbound, 2)
+        self.assertEqual(orange_route.outbound, 0)
+        self.assertTrue(orange_route.has_inbound)
+        self.assertFalse(orange_route.has_outbound)
+        
+        haverhill_route = config.routes[1]
+        self.assertEqual(haverhill_route.route_id, 'CR-Haverhill')
+        self.assertEqual(haverhill_route.route_name, 'Haverhill Line')
+        self.assertEqual(haverhill_route.inbound, 1)
+        
+        # Verify display settings
+        self.assertEqual(config.display.time_format, '12h')
+        self.assertTrue(config.display.abbreviate)
+        self.assertEqual(config.display.refresh, 60)
+    
+    def test_multi_station_mode_config(self):
+        """Test parsing multi-station mode (classic) configuration."""
+        config_dict = {
+            'mode': 'multi-station',
+            'route': 'Red Line',
+            'from': 'Central Square',
+            'to': 'Harvard Square',
+            'display': {
+                'show_route': True,
+                'time_format': '24h'
+            }
+        }
+        
+        config_path = self.write_config('multi_station_test.yaml', config_dict)
+        config = self.parser.parse_yaml(config_path)
+        
+        self.assertEqual(config.mode, 'multi-station')
+        self.assertEqual(config.route_id, 'Red')
+        self.assertEqual(config.route_name, 'Red Line')
+        self.assertEqual(config.from_station, 'Central Square')
+        self.assertEqual(config.from_station_id, 'place-cntsq')
+        self.assertEqual(config.to_station, 'Harvard Square')
+        self.assertEqual(config.to_station_id, 'place-harsq')
+        self.assertTrue(config.display.show_route)
+        self.assertEqual(config.display.time_format, '24h')
+    
+    def test_single_station_bidirectional_config(self):
+        """Test parsing single-station mode with both directions."""
+        config_dict = {
+            'mode': 'single-station',
+            'station': 'Central Square',
+            'routes': [
+                {'Red Line': {'inbound': 3, 'outbound': 2}}
             ]
         }
         
-        config_path = self.write_config(config_dict)
+        config_path = self.write_config('bidir_test.yaml', config_dict)
         config = self.parser.parse_yaml(config_path)
         
-        # Verify config parsing
-        self.assertEqual(config.station_id, 'place-ogmnl')
-        self.assertEqual(config.tracks[0].route_id, 'Orange')
-        
-        # Test with real API
-        print("\nTesting Oak Grove Orange Line predictions...")
-        
-        for track in config.tracks:
-            predictions = self.ig.get_predictions(
-                config.station_id, 
-                track.direction_id
-            )
-            
-            if predictions and predictions.status_code == 200:
-                data = predictions.json()
-                print(f"\nRoute: {track.route_name}, Direction: {track.direction}")
-                print(f"Found {len(data.get('data', []))} predictions")
-                
-                # Show first few predictions
-                for i, pred in enumerate(data.get('data', [])[:track.count]):
-                    departure_time = pred.get('attributes', {}).get('departure_time')
-                    if departure_time:
-                        print(f"  Prediction {i+1}: {departure_time}")
-    
-    def test_central_square_bidirectional(self):
-        """Test Central Square bidirectional configuration."""
-        config_dict = {
-            'mode': 'bidirectional',
-            'station': 'Central Square',
-            'route': 'Red Line',
-            'inbound': {'show': 2},
-            'outbound': {'show': 2}
-        }
-        
-        config_path = self.write_config(config_dict)
-        config = self.parser.parse_yaml(config_path)
-        
-        # Verify config parsing
+        self.assertEqual(config.mode, 'single-station')
         self.assertEqual(config.station_id, 'place-cntsq')
-        self.assertEqual(config.tracks[0].route_id, 'Red')
+        self.assertEqual(len(config.routes), 1)
         
-        print("\nTesting Central Square bidirectional predictions...")
-        
-        # Get inbound predictions
-        inbound_predictions = self.ig.get_predictions(config.station_id, "0")
-        if inbound_predictions and inbound_predictions.status_code == 200:
-            data = inbound_predictions.json()
-            print(f"\nInbound predictions: {len(data.get('data', []))}")
-            for i, pred in enumerate(data.get('data', [])[:config.inbound_count]):
-                departure_time = pred.get('attributes', {}).get('departure_time')
-                if departure_time:
-                    print(f"  Inbound {i+1}: {departure_time}")
-        
-        # Get outbound predictions
-        outbound_predictions = self.ig.get_predictions(config.station_id, "1")
-        if outbound_predictions and outbound_predictions.status_code == 200:
-            data = outbound_predictions.json()
-            print(f"\nOutbound predictions: {len(data.get('data', []))}")
-            for i, pred in enumerate(data.get('data', [])[:config.outbound_count]):
-                departure_time = pred.get('attributes', {}).get('departure_time')
-                if departure_time:
-                    print(f"  Outbound {i+1}: {departure_time}")
+        route = config.routes[0]
+        self.assertEqual(route.route_id, 'Red')
+        self.assertEqual(route.inbound, 3)
+        self.assertEqual(route.outbound, 2)
+        self.assertTrue(route.has_inbound)
+        self.assertTrue(route.has_outbound)
     
-    def test_journey_mode_schedule(self):
-        """Test journey mode with schedule data."""
+    def test_station_name_resolution(self):
+        """Test station name to ID resolution."""
+        # Test various formats
+        test_cases = [
+            ('Oak Grove', 'place-ogmnl'),
+            ('oak grove', 'place-ogmnl'),
+            ('CENTRAL SQUARE', 'place-cntsq'),
+            ('Harvard Square', 'place-harsq'),
+            ('place-portr', 'place-portr'),  # Already an ID
+            ('Unknown Station', 'Unknown Station')  # Unknown station
+        ]
+        
+        for station_name, expected_id in test_cases:
+            result = self.parser.resolve_station_id(station_name)
+            self.assertEqual(result, expected_id)
+    
+    def test_route_name_resolution(self):
+        """Test route name to ID resolution."""
+        test_cases = [
+            ('Orange Line', 'Orange'),
+            ('orange', 'Orange'),
+            ('OL', 'Orange'),
+            ('Red Line', 'Red'),
+            ('Haverhill Line', 'CR-Haverhill'),
+            ('haverhill', 'CR-Haverhill'),
+            ('Orange', 'Orange'),  # Already an ID
+            ('CR-Worcester', 'CR-Worcester'),  # Already an ID
+            ('Unknown Route', 'Unknown Route')  # Unknown route
+        ]
+        
+        for route_name, expected_id in test_cases:
+            result = self.parser.resolve_route_id(route_name)
+            self.assertEqual(result, expected_id)
+    
+    def test_cli_backward_compatibility(self):
+        """Test backward compatibility with CLI arguments."""
+        args = Namespace(
+            routeid='Red',
+            routename='Red Line',
+            stop1id='place-cntsq',
+            stop1name='Central Square',
+            stop2id='place-harsq',
+            stop2name='Harvard Square'
+        )
+        
+        config = self.parser.parse_cli_args(args)
+        
+        self.assertEqual(config.mode, 'multi-station')
+        self.assertEqual(config.route_id, 'Red')
+        self.assertEqual(config.route_name, 'Red Line')
+        self.assertEqual(config.from_station_id, 'place-cntsq')
+        self.assertEqual(config.to_station_id, 'place-harsq')
+    
+    def test_validation_errors(self):
+        """Test configuration validation errors."""
+        # Single-station mode without station
+        with self.assertRaises(ValueError) as cm:
+            config = Config(mode='single-station')
+            config.validate()
+        self.assertIn("station", str(cm.exception).lower())
+        
+        # Single-station mode without routes
+        with self.assertRaises(ValueError) as cm:
+            config = Config(mode='single-station', station='Oak Grove')
+            config.validate()
+        self.assertIn("routes", str(cm.exception).lower())
+        
+        # Multi-station mode without route
+        with self.assertRaises(ValueError) as cm:
+            config = Config(mode='multi-station', from_station='Central')
+            config.validate()
+        self.assertIn("route", str(cm.exception).lower())
+        
+        # Invalid mode
+        with self.assertRaises(ValueError) as cm:
+            config = Config(mode='invalid')
+            config.validate()
+        self.assertIn("unknown mode", str(cm.exception).lower())
+    
+    def test_default_values(self):
+        """Test default configuration values."""
         config_dict = {
-            'mode': 'journey',
-            'route': 'Red Line',
-            'from': 'Central Square',
-            'to': 'Harvard Square'
+            'mode': 'single-station',
+            'station': 'Oak Grove',
+            'routes': [
+                {'Orange Line': {'inbound': 1}}  # Only inbound specified
+            ]
         }
         
-        config_path = self.write_config(config_dict)
+        config_path = self.write_config('defaults_test.yaml', config_dict)
         config = self.parser.parse_yaml(config_path)
         
-        print("\nTesting journey mode (Central to Harvard)...")
+        # Check defaults
+        self.assertEqual(config.routes[0].inbound, 1)
+        self.assertEqual(config.routes[0].outbound, 0)  # Default when not specified
+        self.assertEqual(config.display.time_format, '12h')  # Default time format
+        self.assertTrue(config.display.abbreviate)  # Default abbreviation
+        self.assertEqual(config.display.refresh, 60)  # Default refresh
+    
+    def test_load_config_priority(self):
+        """Test configuration loading priority."""
+        # Create a config file
+        config_dict = {'mode': 'single-station', 'station': 'Oak Grove', 'routes': [{'Orange': {'inbound': 1}}]}
+        config_path = self.write_config('config.yaml', config_dict)
         
-        # Get schedule for from station
-        from_data = self.ig.get_current_schedule(
-            config.route_id, 
-            config.from_station_id
+        # Test: explicit config file takes precedence
+        config = self.parser.load_config(config_path=config_path)
+        self.assertEqual(config.mode, 'single-station')
+        
+        # Test: CLI args work when no config file
+        args = Namespace(
+            routeid='Red', routename='Red Line',
+            stop1id='place-cntsq', stop1name='Central',
+            stop2id='place-harsq', stop2name='Harvard'
         )
+        config = self.parser.load_config(cli_args=args)
+        self.assertEqual(config.mode, 'multi-station')
         
-        print(f"\nFrom {config.from_station}:")
-        if from_data[0]:  # Next inbound arrival
-            print(f"  Next Inbound Arrival: {from_data[0]}")
-        if from_data[2]:  # Next inbound departure
-            print(f"  Next Inbound Departure: {from_data[2]}")
-        
-        # Get schedule for to station  
-        to_data = self.ig.get_current_schedule(
-            config.route_id,
-            config.to_station_id
-        )
-        
-        print(f"\nTo {config.to_station}:")
-        if to_data[0]:  # Next inbound arrival
-            print(f"  Next Inbound Arrival: {to_data[0]}")
+        # Test: Config file takes precedence over CLI when both provided
+        config = self.parser.load_config(config_path=config_path, cli_args=args)
+        self.assertEqual(config.mode, 'single-station')
 
 
 if __name__ == '__main__':
-    # Run with verbosity to see print statements
-    unittest.main(verbosity=2)
+    unittest.main()

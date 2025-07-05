@@ -1,0 +1,8 @@
+mode: multi-station
+route: Red Line
+from: Central Square
+to: Harvard Square
+
+display:
+  time_format: 12h
+  show_route: true # Show "Red Line" at top of display
