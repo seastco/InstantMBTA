@@ -1,0 +1,7 @@
+requests==2.32.4
+Pillow==11.3.0
+PyYAML==6.0.2
+font-hanken-grotesk==0.0.2
+font-intuitive==0.0.4
+inky==2.1.0; platform_machine == "armv7l" or platform_machine == "aarch64"
+numpy==2.3.0; platform_machine == "armv7l" or platform_machine == "aarch64"

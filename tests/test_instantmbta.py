@@ -1,8 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import requests
-from instantmbta import run_display_loop
-import time
+from instantmbta.__main__ import run_display_loop
 
 class TestInstantMBTA(unittest.TestCase):
     def setUp(self):
