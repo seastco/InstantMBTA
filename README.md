@@ -4,12 +4,18 @@ InstantMBTA is a real-time MBTA transit display that shows train schedules and p
 
 ## Features
 
-- **Multiple Display Modes**: Station arrivals, journey tracking, or bidirectional views
+- **Multiple Display Modes**: Station arrivals or journey tracking
 - **Multi-Route Support**: Track trains from different lines at the same station
 - **Real-time Updates**: Live predictions from the MBTA API
 - **Flexible Configuration**: YAML config files for easy customization
 - **E-ink Display**: Low power, always-on display (optional)
 - **Smart Station Resolution**: Use friendly names like "Oak Grove" instead of IDs
+
+## Requirements
+
+- Python 3.13 or higher
+- Raspberry Pi with Inky pHAT display (optional - can run in console mode)
+- MBTA API key (free from [MBTA V3 API](https://www.mbta.com/developers/v3-api))
 
 ## Installation
 
@@ -21,101 +27,64 @@ cd instantmbta
 
 2. Install dependencies:
 ```bash
-cd python
 pip install -r requirements.txt
 ```
 
 For Raspberry Pi with display:
 ```bash
-sudo apt-get install libopenblas-dev  # Required for NumPy 2.0.0
+sudo apt-get install libopenblas-dev  # Required for NumPy
 ```
 
 3. Set up your API key:
 ```bash
-# Create secret_constants.py
-echo 'API_KEY = "your-api-key-here"' > secret_constants.py
+# Get your free API key from https://api-v3.mbta.com/
+echo 'API_KEY = "your-api-key-here"' > instantmbta/secret_constants.py
 ```
 
 ## Quick Start
 
-1. Copy the example config:
+1. Copy an example config:
 ```bash
-cp example_config.yaml config.yaml
+cp examples/config_single_station.yaml config.yaml
 ```
 
-2. Edit `config.yaml` for your needs (see modes below)
+2. Edit `config.yaml` for your station
 
 3. Run InstantMBTA:
 ```bash
-python3 instantmbta.py
+# Test without display (console output)
+python3 -m instantmbta --config config.yaml --once
+
+# Run continuously with display
+python3 -m instantmbta --config config.yaml
 ```
 
-## Display Modes
+## Configuration
 
-### Station Mode
-Perfect for tracking multiple routes at your home station:
+### Single-Station Mode
+Track multiple routes at your home station:
 
 ```yaml
-# config.yaml
 mode: single-station
 station: Oak Grove
 
 routes:
   - Orange Line:
-      inbound: 2
-  
+      inbound: 2    # Next 2 trains inbound
   - Haverhill Line:
-      inbound: 1
+      inbound: 1    # Next commuter rail
 
 display:
   time_format: 12h
-  abbreviate: true
+  abbreviate: true  # OL instead of Orange Line
+  refresh: 60       # Update every 60 seconds
 ```
 
-**Display Output:**
-```
-Oak Grove           07/04/25
-
-OL In:  10:15 AM
-OL In:  10:23 AM
-CR In:  10:28 AM
-```
-
-### Bidirectional Mode
-Great for stations where you travel in both directions:
+### Multi-Station Mode (Journey)
+Track your commute between two stations:
 
 ```yaml
-mode: bidirectional
-station: Central Square
-route: Red Line
-
-inbound:
-  show: 2
-
-outbound:
-  show: 2
-
-display:
-  show_directions: true
-```
-
-**Display Output:**
-```
-Central Square      07/04/25
-
-← Alewife
-  10:15 AM
-  10:23 AM
-→ Ashmont/Braintree
-  10:14 AM
-  10:21 AM
-```
-
-### Journey Mode
-Track your regular commute between two stations:
-
-```yaml
-mode: journey
+mode: multi-station
 route: Red Line
 from: Central Square
 to: Harvard Square
@@ -124,9 +93,45 @@ display:
   show_route: true
 ```
 
-**Display Output:**
+### Station & Route Names
+Use friendly names - they're automatically converted:
+- `Oak Grove` → place-ogmnl
+- `Central Square` → place-cntsq  
+- `Orange Line` or `OL` → Orange
+- `Haverhill Line` → CR-Haverhill
+
+See [MBTA API documentation](https://www.mbta.com/developers/v3-api) for all station and route IDs.
+
+## Command Line Usage
+
+```bash
+# Use config file (recommended)
+python3 -m instantmbta --config config.yaml
+
+# Test mode (run once)
+python3 -m instantmbta --config config.yaml --once
+
+# Debug mode
+python3 -m instantmbta --config config.yaml --log-level DEBUG
+
+# Legacy CLI mode (backward compatibility)
+python3 -m instantmbta Red "Red Line" place-cntsq "Central Square" place-harsq "Harvard Square"
 ```
-Red Line            07/04/25
+
+## Display Output Examples
+
+### Single-Station Mode
+```
+Oak Grove           07/06/25
+
+OL In:  10:15 AM
+OL In:  10:23 AM
+CR In:  10:28 AM
+```
+
+### Multi-Station Mode
+```
+Red Line            07/06/25
 
 Central Square
 Next Inbound:    10:15 AM
@@ -136,136 +141,35 @@ Next Inbound:    10:18 AM
 Next Outbound:   10:22 AM
 ```
 
-## Configuration Reference
+## Development
 
-### Station Names
-Use friendly names - they're automatically converted:
-- `Oak Grove` → place-ogmnl
-- `Central Square` → place-cntsq  
-- `North Station` → place-north
-- `Park Street` → place-pktrm
-
-### Route Names
-Use any common format:
-- `Orange Line`, `Orange`, or `OL` → Orange
-- `Red Line`, `Red`, or `RL` → Red
-- `Haverhill Line` or `Haverhill` → CR-Haverhill
-
-### Display Options
-```yaml
-display:
-  time_format: 12h      # 12h or 24h
-  abbreviate: true      # OL vs Orange Line
-  refresh: 60           # seconds between updates
-  show_directions: true # show arrows for bidirectional
-  minimal: false        # minimal display mode
-```
-
-## Command Line Usage
-
-### With Config File (Recommended)
+### Running Tests
 ```bash
-# Use default config.yaml
-python3 instantmbta.py
-
-# Use specific config
-python3 instantmbta.py --config morning-commute.yaml
-
-# Run once for testing
-python3 instantmbta.py --once
-
-# Debug mode
-python3 instantmbta.py --log-level DEBUG
+python -m pytest tests/
 ```
 
-### Legacy CLI Mode
-For backward compatibility or quick tests:
-```bash
-python3 instantmbta.py Red "Red Line" place-cntsq "Central Square" place-harsq "Harvard Square"
+### Project Structure
 ```
-
-### Data Only (No Display)
-```bash
-python3 infogather.py --config config.yaml
-```
-
-## Examples
-
-### Home Station with Multiple Lines
-```yaml
-mode: station
-station: North Station
-track:
-  - Orange Line:
-      direction: outbound
-      count: 3
-  - Green Line:
-      direction: outbound  
-      count: 2
-  - Haverhill Line:
-      direction: outbound
-      count: 1
-```
-
-### Flexible Commute Station
-```yaml
-mode: bidirectional
-station: Harvard Square
-route: Red Line
-inbound:
-  show: 3
-outbound:
-  show: 3
-```
-
-### Evening Commute Tracker
-```yaml
-mode: journey
-route: Orange Line
-from: Downtown Crossing
-to: Oak Grove
-display:
-  time_format: 24h  # 17:30 instead of 5:30 PM
-```
-
-## Advanced Usage
-
-### Multiple Configurations
-Create different configs for different use cases:
-```bash
-# Morning commute
-python3 instantmbta.py --config morning.yaml
-
-# Evening commute  
-python3 instantmbta.py --config evening.yaml
-
-# Weekend trips
-python3 instantmbta.py --config weekend.yaml
-```
-
-### Testing Your Configuration
-```bash
-# Validate config and run once
-python3 instantmbta.py --config myconfig.yaml --once
-
-# See what API calls are being made
-python3 instantmbta.py --log-level DEBUG
+instantmbta/
+├── instantmbta/
+│   ├── __main__.py       # Entry point
+│   ├── config_parser.py  # YAML configuration parser
+│   ├── display_modes.py  # Display mode implementations
+│   ├── infogather.py     # MBTA API client
+│   └── inkytrain.py      # E-ink display driver
+├── examples/             # Example configurations
+├── tests/               # Unit tests
+└── config.yaml          # Your configuration (create this)
 ```
 
 ## Troubleshooting
 
 **No display output**: Ensure you're running on a Raspberry Pi with Inky pHAT installed
 
-**Config not found**: Check that config.yaml exists in the python directory
+**"API key not found"**: Create `instantmbta/secret_constants.py` with your MBTA API key
 
-**Station not recognized**: Use quotes around station names with spaces: `station: "Oak Grove"`
+**"Station not recognized"**: Check spelling and try the full name (e.g., "Oak Grove" not "Oak")
 
-**No predictions found**: Some stations/routes have limited service - check MBTA.com
+**No predictions**: Some stations/routes have limited service. Check [MBTA.com](https://www.mbta.com)
 
-**API rate limits**: The built-in circuit breaker will automatically retry failed requests
-
-## Logging
-
-- Continuous mode: Logs to `instant.log` (rotating, max 2MB)
-- One-time mode (`--once`): Logs to console
-- Debug mode shows API calls and responses
+**Display overflow**: Reduce the number of predictions in your config
