@@ -1,0 +1,14 @@
+mode: single-station
+station: Wellington 
+
+routes:
+  - Orange Line:
+      inbound: 2
+      outbound: 2
+  - Haverhill Line:
+      inbound: 1
+
+display:
+  time_format: 12h
+  abbreviate: true  # OL instead of Orange Line
+  refresh: 60

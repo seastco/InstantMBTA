@@ -6,7 +6,8 @@ import time
 import logging
 import logging.handlers
 import requests
-import secret_constants
+from . import secret_constants
+from typing import List, Dict, Optional
 
 class CircuitBreaker:
     def __init__(self, failure_threshold=5, reset_timeout=60):
@@ -183,6 +184,9 @@ class InfoGather():
     def get_current_schedule(self, route_id, stop_id):
         """Get current schedule for a route and stop."""
         try:
+            current_time = datetime.now().astimezone()
+            current_date = current_time.date()
+            
             # Get predicted times
             response = self._make_api_request(
                 f"{API_URL}/predictions?filter[route]={route_id}&filter[stop]={stop_id}&sort=departure_time&{API_REQUEST}"
@@ -210,16 +214,27 @@ class InfoGather():
             # Process predicted times
             next_inbound_departure_time = None
             next_outbound_departure_time = None
+            next_inbound_arrival_time = None
+            next_outbound_arrival_time = None
             
             if 'data' in outbound_predicted_time_json:
                 for prediction in outbound_predicted_time_json['data']:
                     if 'attributes' in prediction:
-                        if prediction['attributes'].get('direction_id') == 0:  # Inbound
-                            if next_inbound_departure_time is None:
-                                next_inbound_departure_time = prediction['attributes'].get('departure_time')
-                        else:  # Outbound
-                            if next_outbound_departure_time is None:
-                                next_outbound_departure_time = prediction['attributes'].get('departure_time')
+                        departure_time = prediction['attributes'].get('departure_time')
+                        arrival_time = prediction['attributes'].get('arrival_time')
+                        if departure_time or arrival_time:
+                            dt = datetime.fromisoformat(departure_time or arrival_time)
+                            if dt > current_time and dt.date() == current_date:
+                                if prediction['attributes'].get('direction_id') == 0:  # Inbound
+                                    if next_inbound_departure_time is None:
+                                        next_inbound_departure_time = departure_time or arrival_time
+                                    if next_inbound_arrival_time is None:
+                                        next_inbound_arrival_time = arrival_time
+                                else:  # Outbound
+                                    if next_outbound_departure_time is None:
+                                        next_outbound_departure_time = departure_time or arrival_time
+                                    if next_outbound_arrival_time is None:
+                                        next_outbound_arrival_time = arrival_time
 
             # Process scheduled times
             next_inbound_scheduled_time = None
@@ -228,20 +243,135 @@ class InfoGather():
             if 'data' in outbound_scheduled_time_json:
                 for schedule in outbound_scheduled_time_json['data']:
                     if 'attributes' in schedule:
-                        if schedule['attributes'].get('direction_id') == 0:  # Inbound
-                            if next_inbound_scheduled_time is None:
-                                next_inbound_scheduled_time = schedule['attributes'].get('departure_time')
-                        else:  # Outbound
-                            if next_outbound_scheduled_time is None:
-                                next_outbound_scheduled_time = schedule['attributes'].get('departure_time')
+                        departure_time = schedule['attributes'].get('departure_time')
+                        if departure_time:
+                            dt = datetime.fromisoformat(departure_time)
+                            if dt > current_time and dt.date() == current_date:
+                                if schedule['attributes'].get('direction_id') == 0:  # Inbound
+                                    if next_inbound_scheduled_time is None:
+                                        next_inbound_scheduled_time = departure_time
+                                else:  # Outbound
+                                    if next_outbound_scheduled_time is None:
+                                        next_outbound_scheduled_time = departure_time
 
-            return (next_inbound_scheduled_time, next_inbound_departure_time,
-                    next_outbound_scheduled_time, next_outbound_departure_time)
+            # Use arrival time as departure time if no departure time is available
+            if next_inbound_departure_time is None and next_inbound_arrival_time is not None:
+                next_inbound_departure_time = next_inbound_arrival_time
+            if next_outbound_departure_time is None and next_outbound_arrival_time is not None:
+                next_outbound_departure_time = next_outbound_arrival_time
+
+            return (next_inbound_arrival_time, next_outbound_arrival_time,
+                    next_inbound_departure_time, next_outbound_departure_time)
                     
         except Exception as e:
             self.logger.error(f"Error getting schedule for route {route_id} at stop {stop_id}: {str(e)}")
             return None, None, None, None
 
+    def get_predictions_filtered(self, stop_id: str, direction_id: str, 
+                           route_id: Optional[str] = None, 
+                           count: int = 3) -> List[Dict]:
+        """
+        Get filtered predictions for a specific stop, direction, and optionally route.
+        
+        Args:
+            stop_id: MBTA stop ID
+            direction_id: "0" for inbound, "1" for outbound
+            route_id: Optional route ID to filter by
+            count: Maximum number of predictions to return
+            
+        Returns:
+            List of prediction dictionaries with departure times and route info
+        """
+        try:
+            # Build the request
+            request_string = f"{API_URL}/predictions?filter[stop]={stop_id}&filter[direction_id]={direction_id}"
+            if route_id:
+                request_string += f"&filter[route]={route_id}"
+            request_string += f"&page[limit]={count * 2}&sort=departure_time&{API_REQUEST}"
+            
+            self.logger.debug(f"Getting filtered predictions: {request_string}")
+            response = self._make_api_request(request_string)
+            
+            if response is None or response.status_code != 200:
+                self.logger.error(f"Failed to get predictions for stop {stop_id}")
+                return []
+            
+            data = response.json()
+            predictions = []
+            
+            for item in data.get('data', [])[:count]:
+                attrs = item.get('attributes', {})
+                relationships = item.get('relationships', {})
+                
+                # Get departure or arrival time
+                departure_time = attrs.get('departure_time') or attrs.get('arrival_time')
+                if not departure_time:
+                    continue
+                    
+                prediction = {
+                    'id': item.get('id'),
+                    'departure_time': departure_time,
+                    'arrival_time': attrs.get('arrival_time'),
+                    'direction_id': attrs.get('direction_id'),
+                    'route_id': relationships.get('route', {}).get('data', {}).get('id'),
+                    'trip_id': relationships.get('trip', {}).get('data', {}).get('id'),
+                    'status': attrs.get('status'),
+                    'departure_uncertainty': attrs.get('departure_uncertainty'),
+                }
+                
+                # Get destination from trip if available
+                if 'included' in data:
+                    for inc in data['included']:
+                        if inc['type'] == 'trip' and inc['id'] == prediction['trip_id']:
+                            prediction['destination'] = inc['attributes'].get('headsign')
+                            break
+                            
+                predictions.append(prediction)
+                
+            return predictions
+            
+        except Exception as e:
+            self.logger.error(f"Error getting filtered predictions: {str(e)}")
+            return []
+
+    def get_routes_at_stop(self, stop_id: str) -> List[Dict]:
+        """
+        Get all routes that serve a specific stop.
+        
+        Args:
+            stop_id: MBTA stop ID
+            
+        Returns:
+            List of route dictionaries
+        """
+        try:
+            request_string = f"{API_URL}/routes?filter[stop]={stop_id}&{API_REQUEST}"
+            self.logger.debug(f"Getting routes at stop: {request_string}")
+            response = self._make_api_request(request_string)
+            
+            if response is None or response.status_code != 200:
+                return []
+                
+            data = response.json()
+            routes = []
+            
+            for item in data.get('data', []):
+                routes.append({
+                    'id': item['id'],
+                    'name': item['attributes'].get('long_name', item['id']),
+                    'short_name': item['attributes'].get('short_name'),
+                    'type': item['attributes'].get('type'),
+                    'direction_names': item['attributes'].get('direction_names', []),
+                    'direction_destinations': item['attributes'].get('direction_destinations', [])
+                })
+                
+            return routes
+            
+        except Exception as e:
+            self.logger.error(f"Error getting routes at stop: {str(e)}")
+            return []
+
+          
 if __name__ == '__main__':
 
     logger = logging.getLogger('MainLogger')
@@ -262,6 +392,7 @@ if __name__ == '__main__':
     parser.add_argument("stop1name", help="Human friendly name for stop1 being displayed")
     parser.add_argument("stop2id", help="Stop ID for second stop to display")
     parser.add_argument("stop2name", help="Human friendly name for stop2 being displayed")
+    parser.add_argument("--once", action="store_true", help="Run the script once instead of continuously")
     args = parser.parse_args()
     route_id = args.routeid
     route_name = args.routename
@@ -297,4 +428,8 @@ if __name__ == '__main__':
         OLD_MH_NIDT = MH_NIDT
         OLD_MH_NODT = MH_NODT
         OLD_NS_NODT = NS_NODT
+        
+        if args.once:
+            break
+            
         time.sleep(UPDATE_INTERVAL_SECONDS) #seconds

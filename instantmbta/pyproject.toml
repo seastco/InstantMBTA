@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instantmbta"
+version = "2.0.0"
+description = "Real-time MBTA transit display for Raspberry Pi Inky pHAT"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "requests>=2.32.4",
+    "Pillow>=11.3.0",
+    "PyYAML>=6.0.2",
+    "font-hanken-grotesk>=0.0.2",
+    "font-intuitive>=0.0.4",
+]
+
+[project.optional-dependencies]
+display = [
+    "inky>=2.1.0",
+    "numpy>=2.3.0",
+]
+dev = [
+    "pytest>=8.4.0",
+    "black>=25.1.0",
+    "ruff>=0.12.2",
+]
+
+[project.scripts]
+instantmbta = "instantmbta.__main__:main"
