@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import requests
-from infogather import InfoGather, CircuitBreaker
+from instantmbta.infogather import InfoGather, CircuitBreaker
 import time
+
 
 class TestInfoGather(unittest.TestCase):
     def setUp(self):
