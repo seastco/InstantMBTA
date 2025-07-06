@@ -1,6 +1,6 @@
 # InstantMBTA
 
-InstantMBTA is a real-time MBTA transit display that shows train schedules and predictions on a Raspberry Pi [Inky pHAT](https://github.com/pimoroni/inky) e-ink display. Perfect for placing near your door to check train times before leaving home.
+InstantMBTA is a real-time MBTA transit display that shows train schedules and predictions on a Raspberry Pi [Inky pHAT](https://github.com/pimoroni/inky) e-ink display. Perfect for placing near your door to check train times before leaving home!
 
 ## Features
 
@@ -15,8 +15,8 @@ InstantMBTA is a real-time MBTA transit display that shows train schedules and p
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/seastco/InstantMBTA.git
-cd InstantMBTA
+git clone https://github.com/yourusername/instantmbta.git
+cd instantmbta
 ```
 
 2. Install dependencies:
@@ -32,8 +32,8 @@ sudo apt-get install libopenblas-dev  # Required for NumPy 2.0.0
 
 3. Set up your API key:
 ```bash
-# Create python/secret_constants.py
-echo 'API_KEY = "your-api-key-here"' > python/secret_constants.py
+# Create secret_constants.py
+echo 'API_KEY = "your-api-key-here"' > secret_constants.py
 ```
 
 ## Quick Start
@@ -53,21 +53,19 @@ python3 instantmbta.py
 ## Display Modes
 
 ### Station Mode
-Track multiple routes at your home station:
+Perfect for tracking multiple routes at your home station:
 
 ```yaml
 # config.yaml
-mode: station
+mode: single-station
 station: Oak Grove
 
 routes:
   - Orange Line:
-      direction: inbound
-      count: 2
+      inbound: 2
   
   - Haverhill Line:
-      direction: inbound
-      count: 1
+      inbound: 1
 
 display:
   time_format: 12h
