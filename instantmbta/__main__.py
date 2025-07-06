@@ -120,24 +120,15 @@ def run_once(config, display_mode, ig, it, logger):
 def main():
     """Main entry point for InstantMBTA."""
     parser = argparse.ArgumentParser(
-        description="Real-time MBTA transit display for Raspberry Pi Inky pHAT",
-        epilog="For backward compatibility, you can still use: instantmbta <routeid> <routename> <stop1id> <stop1name> <stop2id> <stop2name>"
+        description="Real-time MBTA transit display for Raspberry Pi Inky pHAT"
     )
     
-    # Modern config-based arguments
+    # Config-based arguments
     parser.add_argument("--config", type=Path, help="Path to YAML configuration file")
     parser.add_argument("--once", action="store_true", help="Run once instead of continuously")
     parser.add_argument("--log-level", default="INFO", 
                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], 
                        help="Set the logging level")
-    
-    # Legacy positional arguments for backward compatibility
-    parser.add_argument("routeid", nargs='?', help="Route ID (legacy mode)")
-    parser.add_argument("routename", nargs='?', help="Route name (legacy mode)")
-    parser.add_argument("stop1id", nargs='?', help="Stop 1 ID (legacy mode)")
-    parser.add_argument("stop1name", nargs='?', help="Stop 1 name (legacy mode)")
-    parser.add_argument("stop2id", nargs='?', help="Stop 2 ID (legacy mode)")
-    parser.add_argument("stop2name", nargs='?', help="Stop 2 name (legacy mode)")
     
     args = parser.parse_args()
     
@@ -148,10 +139,7 @@ def main():
     # Load configuration
     config_parser = ConfigParser()
     try:
-        config = config_parser.load_config(
-            config_path=args.config,
-            cli_args=args
-        )
+        config = config_parser.load_config(config_path=args.config)
     except ValueError as e:
         logger.error(f"Configuration error: {e}")
         parser.print_help()

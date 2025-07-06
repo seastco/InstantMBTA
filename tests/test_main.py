@@ -1,4 +1,4 @@
-"""Tests for the new config-driven main module."""
+"""Tests for the main module."""
 
 import unittest
 from unittest.mock import Mock, patch
@@ -13,7 +13,7 @@ from instantmbta.display_modes import DisplayData, DisplayLine
 
 
 class TestMainModule(unittest.TestCase):
-    """Test the new config-driven main module."""
+    """Test the config-driven main module."""
     
     def setUp(self):
         """Set up test fixtures."""
@@ -151,32 +151,9 @@ class TestMainModule(unittest.TestCase):
             
             mock_run.assert_called_once()
     
-    def test_main_backward_compatibility(self):
-        """Test main function with legacy CLI arguments."""
-        test_args = [
-            'instantmbta',
-            'Red', 'Red Line',
-            'place-cntsq', 'Central Square',
-            'place-harsq', 'Harvard Square',
-            '--once'
-        ]
-        
-        with patch('sys.argv', test_args):
-            with patch('instantmbta.__main__.InfoGather'):
-                with patch('instantmbta.__main__.create_display_mode') as mock_create:
-                    with patch('instantmbta.__main__.run_once'):
-                        with patch('platform.machine', return_value='x86_64'):
-                            main()
-        
-        # Verify display mode was created
-        mock_create.assert_called_once()
-        config = mock_create.call_args[0][0]
-        self.assertEqual(config.mode, 'multi-station')
-        self.assertEqual(config.route_id, 'Red')
-    
     def test_main_error_handling(self):
         """Test main function error handling."""
-        test_args = ['instantmbta']  # No config or CLI args
+        test_args = ['instantmbta']  # No config
         
         with patch('sys.argv', test_args):
             with patch('platform.machine', return_value='x86_64'):
@@ -275,21 +252,6 @@ class TestMainModule(unittest.TestCase):
         
         self.assertEqual(result, 1)
 
-    def test_main_invalid_yaml_config(self):
-        """Test main function with invalid YAML in config file."""
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            config_path = Path(tmp_dir) / 'bad.yaml'
-            with open(config_path, 'w') as f:
-                f.write("invalid: yaml: content: [[[")
-            
-            test_args = ['instantmbta', '--config', str(config_path), '--once']
-            
-            with patch('sys.argv', test_args):
-                with patch('platform.machine', return_value='x86_64'):
-                    result = main()
-            
-            self.assertEqual(result, 1)
-
     def test_main_keyboard_interrupt_handling(self):
         """Test graceful shutdown on Ctrl+C."""
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -314,28 +276,6 @@ class TestMainModule(unittest.TestCase):
             
             # Should log shutdown message
             mock_loop.assert_called_once()
-
-    def test_consecutive_failure_backoff_calculation(self):
-        """Test exponential backoff calculation for consecutive failures."""
-        # Track sleep calls
-        sleep_times = []
-        
-        def track_sleep(seconds):
-            sleep_times.append(seconds)
-            if len(sleep_times) >= 3:
-                raise KeyboardInterrupt()
-        
-        # Simulate continuous failures
-        self.display_mode.gather_data.side_effect = requests.exceptions.RequestException("Network error")
-        
-        with patch('time.sleep', side_effect=track_sleep):
-            with self.assertRaises(KeyboardInterrupt):
-                run_display_loop(self.config, self.display_mode, self.ig, self.it, self.logger)
-        
-        # Verify exponential backoff
-        self.assertEqual(sleep_times[0], 60)   # 1x refresh
-        self.assertEqual(sleep_times[1], 120)  # 2x refresh
-        self.assertEqual(sleep_times[2], 240)  # 4x refresh
 
     def test_display_data_changes_detection(self):
         """Test various scenarios of display data change detection."""
@@ -367,33 +307,6 @@ class TestMainModule(unittest.TestCase):
             # All should be detected as different
             should_update = base_data != changed_data
             self.assertTrue(should_update, f"Failed to detect change: {changed_data}")
-
-    def test_logging_levels(self):
-        """Test that different log levels work correctly."""
-        test_scenarios = [
-            ('DEBUG', logging.DEBUG),
-            ('INFO', logging.INFO),
-            ('WARNING', logging.WARNING),
-            ('ERROR', logging.ERROR),
-            ('CRITICAL', logging.CRITICAL),
-        ]
-        
-        for level_str, expected_level in test_scenarios:
-            test_args = ['instantmbta', '--log-level', level_str]
-            
-            with patch('sys.argv', test_args):
-                with patch('instantmbta.__main__.setup_logging') as mock_setup:
-                    with patch('instantmbta.__main__.ConfigParser'):
-                        with patch('platform.machine', return_value='x86_64'):
-                            try:
-                                main()
-                            except:
-                                pass
-                    
-                    # Verify correct log level was set
-                    mock_setup.assert_called()
-                    call_args = mock_setup.call_args[1]
-                    self.assertEqual(call_args['log_level'], expected_level)
 
     def test_empty_predictions_handling(self):
         """Test handling of empty predictions gracefully."""

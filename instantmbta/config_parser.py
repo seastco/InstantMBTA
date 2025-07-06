@@ -1,6 +1,5 @@
-"""Configuration parser for InstantMBTA - handles YAML configs and CLI backward compatibility."""
+"""Configuration parser for InstantMBTA - handles YAML configs."""
 
-import argparse
 import yaml
 from typing import List, Optional
 from pathlib import Path
@@ -77,7 +76,7 @@ class Config:
 
 
 class ConfigParser:
-    """Parse configuration from YAML or command line arguments."""
+    """Parse configuration from YAML."""
 
     # Common station name → station ID
     STATION_IDS = {
@@ -204,34 +203,16 @@ class ConfigParser:
         config.validate()
         return config
 
-    def parse_cli_args(self, args: argparse.Namespace) -> Config:
-        config = Config(mode='multi-station')
-        config.route_id        = args.routeid
-        config.route_name      = args.routename
-        config.from_station    = args.stop1name
-        config.from_station_id = args.stop1id
-        config.to_station      = args.stop2name
-        config.to_station_id   = args.stop2id
-        config.validate()
-        return config
-
-    def load_config(
-        self,
-        config_path: Optional[Path] = None,
-        cli_args: Optional[argparse.Namespace] = None
-    ) -> Config:
+    def load_config(self, config_path: Optional[Path] = None) -> Config:
         if config_path and config_path.exists():
             self.logger.info(f"Loading config from {config_path}")
             return self.parse_yaml(config_path)
 
-        if cli_args and hasattr(cli_args, 'routeid'):
-            self.logger.info("Using legacy CLI arguments")
-            return self.parse_cli_args(cli_args)
-
+        # Look for default config files
         for name in ('config.yaml', 'config.yml', 'instantmbta.yaml'):
             p = Path(name)
             if p.exists():
                 self.logger.info(f"Loading config from {p}")
                 return self.parse_yaml(p)
 
-        raise ValueError("No configuration found. Provide a config file or use CLI arguments.")
+        raise ValueError("No configuration found. Please provide a config file using --config.")

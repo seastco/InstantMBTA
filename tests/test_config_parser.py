@@ -4,7 +4,6 @@ import unittest
 import tempfile
 import yaml
 from pathlib import Path
-from argparse import Namespace
 from instantmbta.config_parser import ConfigParser, Config
 
 
@@ -70,7 +69,7 @@ class TestConfigParser(unittest.TestCase):
         self.assertEqual(config.display.refresh, 60)
     
     def test_multi_station_mode_config(self):
-        """Test parsing multi-station mode (classic) configuration."""
+        """Test parsing multi-station mode configuration."""
         config_dict = {
             'mode': 'multi-station',
             'route': 'Red Line',
@@ -153,25 +152,6 @@ class TestConfigParser(unittest.TestCase):
             result = self.parser.resolve_route_id(route_name)
             self.assertEqual(result, expected_id)
     
-    def test_cli_backward_compatibility(self):
-        """Test backward compatibility with CLI arguments."""
-        args = Namespace(
-            routeid='Red',
-            routename='Red Line',
-            stop1id='place-cntsq',
-            stop1name='Central Square',
-            stop2id='place-harsq',
-            stop2name='Harvard Square'
-        )
-        
-        config = self.parser.parse_cli_args(args)
-        
-        self.assertEqual(config.mode, 'multi-station')
-        self.assertEqual(config.route_id, 'Red')
-        self.assertEqual(config.route_name, 'Red Line')
-        self.assertEqual(config.from_station_id, 'place-cntsq')
-        self.assertEqual(config.to_station_id, 'place-harsq')
-    
     def test_validation_errors(self):
         """Test configuration validation errors."""
         # Single-station mode without station
@@ -224,22 +204,39 @@ class TestConfigParser(unittest.TestCase):
         config_dict = {'mode': 'single-station', 'station': 'Oak Grove', 'routes': [{'Orange': {'inbound': 1}}]}
         config_path = self.write_config('config.yaml', config_dict)
         
-        # Test: explicit config file takes precedence
+        # Test: explicit config file
         config = self.parser.load_config(config_path=config_path)
         self.assertEqual(config.mode, 'single-station')
         
-        # Test: CLI args work when no config file
-        args = Namespace(
-            routeid='Red', routename='Red Line',
-            stop1id='place-cntsq', stop1name='Central',
-            stop2id='place-harsq', stop2name='Harvard'
-        )
-        config = self.parser.load_config(cli_args=args)
-        self.assertEqual(config.mode, 'multi-station')
+        # Test: no config file specified should raise error
+        with self.assertRaises(ValueError) as cm:
+            self.parser.load_config()
+        self.assertIn("No configuration found", str(cm.exception))
+    
+    def test_load_config_default_files(self):
+        """Test loading from default config file names."""
+        config_dict = {
+            'mode': 'single-station',
+            'station': 'Oak Grove',
+            'routes': [{'Orange Line': {'inbound': 1}}]
+        }
         
-        # Test: Config file takes precedence over CLI when both provided
-        config = self.parser.load_config(config_path=config_path, cli_args=args)
-        self.assertEqual(config.mode, 'single-station')
+        # Test each default filename
+        for filename in ['config.yaml', 'config.yml', 'instantmbta.yaml']:
+            # Create file in current directory
+            config_path = Path(filename)
+            try:
+                with open(config_path, 'w') as f:
+                    yaml.dump(config_dict, f)
+                
+                # Should load without explicit path
+                config = self.parser.load_config()
+                self.assertEqual(config.mode, 'single-station')
+                self.assertEqual(config.station, 'Oak Grove')
+            finally:
+                # Clean up
+                if config_path.exists():
+                    config_path.unlink()
 
 
 if __name__ == '__main__':

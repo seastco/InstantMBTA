@@ -105,7 +105,7 @@ See [MBTA API documentation](https://www.mbta.com/developers/v3-api) for all sta
 ## Command Line Usage
 
 ```bash
-# Use config file (recommended)
+# Use config file
 python3 -m instantmbta --config config.yaml
 
 # Test mode (run once)
@@ -113,9 +113,6 @@ python3 -m instantmbta --config config.yaml --once
 
 # Debug mode
 python3 -m instantmbta --config config.yaml --log-level DEBUG
-
-# Legacy CLI mode (backward compatibility)
-python3 -m instantmbta Red "Red Line" place-cntsq "Central Square" place-harsq "Harvard Square"
 ```
 
 ## Display Output Examples

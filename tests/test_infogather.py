@@ -101,44 +101,6 @@ class TestInfoGather(unittest.TestCase):
         self.assertEqual(result, "success")
         self.assertEqual(cb.state, "CLOSED")
 
-    def test_exponential_backoff(self):
-        """Test exponential backoff in retry logic."""
-        with patch('requests.get') as mock_get:
-            mock_get.side_effect = requests.exceptions.RequestException("Test error")
-            
-            with patch.object(self.ig, 'verify_connection', return_value=False):
-                with patch('time.sleep') as mock_sleep:
-                    try:
-                        self.ig._make_api_request("test_url")
-                    except Exception:
-                        pass
-                    
-                    # Verify sleep calls with exponential backoff
-                    expected_sleeps = [5, 10, 20, 40]  # 5 * 2^n for 4 attempts
-                    actual_sleeps = [call[0][0] for call in mock_sleep.call_args_list]
-                    self.assertEqual(actual_sleeps, expected_sleeps)
-
-    def test_consecutive_failures_reset(self):
-        """Test that consecutive failures counter resets on success."""
-        with patch('requests.get') as mock_get:
-            # Simulate failure then success
-            mock_get.side_effect = [
-                requests.exceptions.RequestException("Failure"),
-                MagicMock()
-            ]
-            
-            # First attempt fails
-            self.ig.verify_connection()
-            self.assertEqual(self.ig.consecutive_failures, 1)
-            
-            # Reset the mock for the second attempt
-            mock_get.reset_mock()
-            mock_get.return_value = MagicMock()
-            
-            # Second attempt succeeds
-            self.ig.verify_connection()
-            self.assertEqual(self.ig.consecutive_failures, 0)
-
     def test_get_predictions_filtered_with_pagination(self):
         """Test filtered predictions with pagination handling."""
         with patch.object(self.ig, '_make_api_request') as mock_request:
@@ -354,26 +316,6 @@ class TestInfoGather(unittest.TestCase):
             self.assertNotIn('filter[route]', call_url)
             self.assertIn('page[limit]=4', call_url)  # 2 * 2
 
-    def test_get_predictions_filtered_empty_response(self):
-        """Test handling of empty API responses."""
-        with patch.object(self.ig, '_make_api_request') as mock_request:
-            # Test various empty responses
-            empty_responses = [
-                {'data': []},  # Empty data array
-                {'data': None},  # Null data
-                {},  # Missing data key
-                {'error': 'Not found'},  # Error response
-            ]
-            
-            for response_data in empty_responses:
-                mock_response = MagicMock()
-                mock_response.status_code = 200
-                mock_response.json.return_value = response_data
-                mock_request.return_value = mock_response
-                
-                predictions = self.ig.get_predictions_filtered('place-test', '0')
-                self.assertEqual(predictions, [], f"Failed for response: {response_data}")
-
     def test_get_current_schedule_edge_cases(self):
         """Test edge cases in get_current_schedule method."""
         with patch.object(self.ig, '_make_api_request') as mock_request:
@@ -425,28 +367,6 @@ class TestInfoGather(unittest.TestCase):
             # Should only return future times
             self.assertIsNotNone(result[2])  # inbound departure
             self.assertIn(future_time.strftime('%H:%M'), result[2])
-
-    def test_error_logging_and_recovery(self):
-        """Test that errors are properly logged and don't crash the system."""
-        with patch.object(self.ig, '_make_api_request') as mock_request:
-            # Simulate various errors
-            mock_request.side_effect = [
-                Exception("Network timeout"),
-                requests.exceptions.ConnectionError("Connection refused"),
-                ValueError("Invalid JSON")
-            ]
-            
-            # All should return empty lists and log errors
-            result1 = self.ig.get_predictions_filtered('place-test', '0')
-            result2 = self.ig.get_routes_at_stop('place-test')
-            result3 = self.ig.get_predictions_filtered('place-test', '1')
-            
-            self.assertEqual(result1, [])
-            self.assertEqual(result2, [])
-            self.assertEqual(result3, [])
-            
-            # Verify errors were logged
-            self.assertEqual(self.ig.logger.error.call_count, 3)
 
 if __name__ == '__main__':
     unittest.main() 

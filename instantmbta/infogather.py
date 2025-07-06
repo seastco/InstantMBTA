@@ -1,6 +1,5 @@
 """Module for gathering and processing MBTA transit information using their V3 API."""
 
-import argparse
 from datetime import datetime
 import time
 import logging
@@ -367,66 +366,3 @@ class InfoGather():
         except Exception as e:
             self.logger.error(f"Error getting routes at stop: {str(e)}")
             return []
-
-          
-if __name__ == '__main__':
-
-    logger = logging.getLogger('MainLogger')
-    logger.setLevel(logging.INFO)
-    handler = logging.handlers.RotatingFileHandler(
-              LOG_FILENAME, maxBytes=2097152, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s: %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    parser = argparse.ArgumentParser(epilog="For routename, stop1name and stop2name,\
-        encapsulate in quotes if name has spaces. (e.g. \"A Place\") \
-        See https://www.mbta.com/developers/v3-api for more information \
-        on determining the route and stop ID.")
-    parser.add_argument("routeid", help="Route ID for which route is being displayed")
-    parser.add_argument("routename", help="Human friendly name for route being displayed. If u")
-    parser.add_argument("stop1id", help="Stop ID for first stop to display")
-    parser.add_argument("stop1name", help="Human friendly name for stop1 being displayed")
-    parser.add_argument("stop2id", help="Stop ID for second stop to display")
-    parser.add_argument("stop2name", help="Human friendly name for stop2 being displayed")
-    parser.add_argument("--once", action="store_true", help="Run the script once instead of continuously")
-    args = parser.parse_args()
-    route_id = args.routeid
-    route_name = args.routename
-    stop1 = args.stop1id
-    stop1_name = args.stop1name
-    stop2 = args.stop2id
-    stop2_name = args.stop2name
-
-    ig = InfoGather()
-
-    OLD_MH_NIAT = OLD_MH_NOAT = OLD_MH_NIDT = OLD_MH_NODT = OLD_NS_NODT = None
-    MH_NIAT = MH_NOAT = MH_NIDT = MH_NODT = None
-    NS_NIAT = NS_NOAT = NS_NIDT = NS_NODT = None
-
-    while True:
-        try:
-            #NIAT = Next Incoming Arrival Time
-            #NOAT = Next Outbound Arrival Time
-            #NIDT = Next Inbound Departure Time
-            #NODT = Next Outbound Departure Time
-            MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT = ig.get_current_schedule(route_id, stop1)
-            NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT = ig.get_current_schedule(route_id, stop2)
-            if (OLD_MH_NIAT != MH_NIAT or OLD_MH_NOAT != MH_NOAT or OLD_NS_NODT != NS_NODT):
-                logger.debug("Screen refresh activated")
-        except requests.exceptions.RequestException as err:
-            logger.error("There was an exception with the connection: %s", err)
-        logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
-                   stop1_name, MH_NIAT, MH_NOAT, MH_NIDT, MH_NODT)
-        logger.info("%s - Next Inbound Arrival: %s, Next Outbound Arrival: %s, Next Inbound Departure: %s, Next Outbound Departure: %s", 
-                   stop2_name, NS_NIAT, NS_NOAT, NS_NIDT, NS_NODT)
-        OLD_MH_NIAT = MH_NIAT
-        OLD_MH_NOAT = MH_NOAT
-        OLD_MH_NIDT = MH_NIDT
-        OLD_MH_NODT = MH_NODT
-        OLD_NS_NODT = NS_NODT
-        
-        if args.once:
-            break
-            
-        time.sleep(UPDATE_INTERVAL_SECONDS) #seconds

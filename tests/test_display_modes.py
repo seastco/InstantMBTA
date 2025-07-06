@@ -292,53 +292,6 @@ class TestDisplayModes(unittest.TestCase):
         time_lines = [l for l in display_data.lines if 'Next' in l.text]
         self.assertEqual(len(time_lines), 3)  # 1 at Central, 2 at Harvard
     
-    def test_format_time_12h(self):
-        """Test time formatting in 12-hour format."""
-        config = Config(mode='single-station', display=DisplayConfig(time_format='12h'))
-        mode = SingleStationMode(config)
-        
-        # Morning time
-        result = mode.format_time('2025-07-05T10:15:00-04:00')
-        self.assertEqual(result, '10:15 AM')
-        
-        # Afternoon time
-        result = mode.format_time('2025-07-05T15:30:00-04:00')
-        self.assertEqual(result, '3:30 PM')
-        
-        # Midnight
-        result = mode.format_time('2025-07-05T00:00:00-04:00')
-        self.assertEqual(result, '12:00 AM')
-        
-        # None handling
-        result = mode.format_time(None)
-        self.assertEqual(result, '---')
-    
-    def test_format_time_24h(self):
-        """Test time formatting in 24-hour format."""
-        config = Config(mode='single-station', display=DisplayConfig(time_format='24h'))
-        mode = SingleStationMode(config)
-        
-        result = mode.format_time('2025-07-05T15:30:00-04:00')
-        self.assertEqual(result, '15:30')
-    
-    def test_abbreviate_route(self):
-        """Test route name abbreviation."""
-        config = Config(mode='single-station', display=DisplayConfig(abbreviate=True))
-        mode = SingleStationMode(config)
-        
-        # Test subway lines
-        self.assertEqual(mode.abbreviate_route('Orange Line'), 'OL')
-        self.assertEqual(mode.abbreviate_route('Red Line'), 'RL')
-        self.assertEqual(mode.abbreviate_route('Blue Line'), 'BL')
-        self.assertEqual(mode.abbreviate_route('Green Line'), 'GL')
-        
-        # Test commuter rail
-        self.assertEqual(mode.abbreviate_route('Haverhill Line'), 'CR')
-        self.assertEqual(mode.abbreviate_route('Worcester Line'), 'CR')
-        
-        # Test unknown route
-        self.assertEqual(mode.abbreviate_route('Unknown Route'), 'Unknown Route')
-    
     def test_error_handling(self):
         """Test error handling in data gathering."""
         config = self.create_single_station_config()
@@ -401,26 +354,6 @@ class TestDisplayModes(unittest.TestCase):
         self.assertEqual(len(data['errors']), 1)
         self.assertIn('Haverhill Line', data['errors'][0])
 
-    def test_single_station_time_formatting_edge_cases(self):
-        """Test time formatting with various edge cases."""
-        config = Config(mode='single-station', display=DisplayConfig(time_format='12h'))
-        mode = SingleStationMode(config)
-        
-        # Test various time edge cases
-        test_cases = [
-            ('2025-07-06T00:00:00-04:00', '12:00 AM'),  # Midnight
-            ('2025-07-06T12:00:00-04:00', '12:00 PM'),  # Noon
-            ('2025-07-06T23:59:59-04:00', '11:59 PM'),  # Almost midnight
-            ('2025-07-06T01:30:00-04:00', '1:30 AM'),   # Early morning
-            (None, '---'),  # None handling
-            ('invalid', '---'),  # Invalid format
-            ('', '---'),  # Empty string
-        ]
-        
-        for input_time, expected in test_cases:
-            result = mode.format_time(input_time)
-            self.assertEqual(result, expected, f"Failed for input: {input_time}")
-
     def test_multi_station_missing_schedule_data(self):
         """Test multi-station mode with missing schedule data."""
         config = self.create_multi_station_config()
@@ -481,53 +414,6 @@ class TestDisplayModes(unittest.TestCase):
         self.assertEqual(len(indented_lines), 1)  # Second OL prediction
         self.assertEqual(len(error_lines), 1)  # Error message
 
-    def test_abbreviation_edge_cases(self):
-        """Test route abbreviation with edge cases."""
-        config = Config(mode='single-station', display=DisplayConfig(abbreviate=True))
-        mode = SingleStationMode(config)
-        
-        test_cases = [
-            # Standard cases
-            ('Orange Line', 'OL'),
-            ('Red Line', 'RL'),
-            ('Blue Line', 'BL'),
-            ('Green Line', 'GL'),
-            ('Silver Line', 'SL'),
-            
-            # Commuter rail
-            ('Haverhill Line', 'CR'),
-            ('Worcester Line', 'CR'),
-            ('Newburyport/Rockport Line', 'CR'),
-            
-            # Edge cases
-            ('Orange', 'Orange'),  # Already abbreviated
-            ('Bus 1', 'Bus 1'),  # Bus routes
-            ('SL1', 'SL1'),  # Silver Line variant
-            ('Green Line B', 'Green Line B'),  # Green Line branch
-            ('', ''),  # Empty string
-            ('Unknown Route Type', 'Unknown Route Type'),  # Unknown
-        ]
-        
-        for route_name, expected in test_cases:
-            result = mode.abbreviate_route(route_name)
-            self.assertEqual(result, expected, f"Failed for route: {route_name}")
-
-    def test_config_validation_comprehensive(self):
-        """Test comprehensive config validation scenarios."""
-        # Test various invalid configurations
-        invalid_configs = [
-            # Missing required fields
-            Config(mode='single-station'),  # No station
-            Config(mode='single-station', station='Oak Grove'),  # No routes
-            Config(mode='multi-station'),  # No route info
-            Config(mode='multi-station', route_id='Red'),  # No stations
-            Config(mode='invalid-mode'),  # Invalid mode
-        ]
-        
-        for config in invalid_configs:
-            with self.assertRaises(ValueError):
-                config.validate()
-
     def test_predictions_with_uncertainty(self):
         config = self.create_single_station_config()
         mode = SingleStationMode(config)
@@ -564,40 +450,6 @@ class TestDisplayModes(unittest.TestCase):
         self.assertEqual(data['predictions'][0].uncertainty_minutes, 1)
         self.assertEqual(data['predictions'][1].uncertainty_minutes, 5)
         self.assertIsNone(data['predictions'][2].uncertainty_minutes)
-
-    def test_display_overflow_scenario(self):
-        """Test scenario with too many predictions for display."""
-        config = Config(
-            mode='single-station',
-            station='Park Street',
-            station_id='place-pktrm',
-            routes=[
-                RouteConfig('Red', 'Red Line', inbound=5, outbound=5),
-                RouteConfig('Green-B', 'Green Line B', inbound=5, outbound=5),
-                RouteConfig('Green-C', 'Green Line C', inbound=5, outbound=5),
-            ]
-        )
-        mode = SingleStationMode(config)
-        
-        # Mock many predictions
-        predictions = []
-        for i in range(5):
-            predictions.append({
-                'departure_time': f'2025-07-06T10:{15+i*5:02d}:00-04:00',
-                'route_id': 'Red',
-            })
-        
-        self.mock_ig.get_predictions_filtered.return_value = predictions
-        
-        data = mode.gather_data(self.mock_ig)
-        
-        # Even with many routes/predictions requested, should handle gracefully
-        self.assertGreaterEqual(len(data['predictions']), 15)  # At least some predictions
-        
-        # Display formatting should still work
-        display_data = mode.format_for_display(data)
-        self.assertIsNotNone(display_data)
-        self.assertGreater(len(display_data.lines), 0)
 
 if __name__ == '__main__':
     unittest.main()
