@@ -371,6 +371,7 @@ class InfoGather():
             self.logger.error(f"Error getting routes at stop: {str(e)}")
             return []
 
+          
 if __name__ == '__main__':
 
     logger = logging.getLogger('MainLogger')

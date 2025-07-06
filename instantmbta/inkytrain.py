@@ -200,3 +200,4 @@ class InkyTrain():
         self.inky_display.set_image(img)
         self.inky_display.set_border(self.inky_display.BLACK)
         self.inky_display.show()
+

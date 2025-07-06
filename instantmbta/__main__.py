@@ -77,8 +77,7 @@ def run_display_loop(config, display_mode, ig, it, logger):
                         consecutive_failures, max_consecutive_failures, err)
             
             # Calculate wait time with exponential backoff
-            wait_time = min(config.display.refresh * (2 ** (consecutive_failures - 1)), 300)
-            
+            wait_time = min(config.display.refresh * (2 ** (consecutive_failures - 1)), 300) 
             if consecutive_failures >= max_consecutive_failures:
                 logger.error("Maximum consecutive failures reached. Waiting %d seconds before retry.", wait_time)
             
