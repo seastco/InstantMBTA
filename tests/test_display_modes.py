@@ -407,11 +407,9 @@ class TestDisplayModes(unittest.TestCase):
         
         # Check line types
         route_lines = [l for l in display_data.lines if l.is_route]
-        indented_lines = [l for l in display_data.lines if l.indent]
         error_lines = [l for l in display_data.lines if 'Error:' in l.text]
         
         self.assertEqual(len(route_lines), 2)  # OL and Bus headers
-        self.assertEqual(len(indented_lines), 1)  # Second OL prediction
         self.assertEqual(len(error_lines), 1)  # Error message
 
     def test_predictions_with_uncertainty(self):

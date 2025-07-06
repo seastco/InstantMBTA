@@ -194,33 +194,23 @@ class SingleStationMode(DisplayMode):
         )
         
         # Group predictions by route and direction
-        grouped = {}
+        grouped: Dict[Tuple[str,str], List[TrainPrediction]] = {}
         for pred in data['predictions']:
             key = (pred.route_name, pred.direction)
-            if key not in grouped:
-                grouped[key] = []
-            grouped[key].append(pred)
+            grouped.setdefault(key, []).append(pred)
         
-        # Format each group
+        # For each route/direction, dump all times on one line
         for (route_name, direction), preds in grouped.items():
-            # Add route header
             abbrev_route = self.abbreviate_route(route_name)
             direction_abbrev = "In" if direction == "inbound" else "Out"
+            times = [ self.format_time(p.time.isoformat()) for p in preds ]
+            times_str = ", ".join(times)
             
-            for i, pred in enumerate(preds):
-                time_str = self.format_time(pred.time.isoformat())
-                if i == 0:
-                    # First prediction includes route info
-                    line_text = f"{abbrev_route} {direction_abbrev}: {time_str}"
-                else:
-                    # Subsequent predictions are indented
-                    line_text = f"        {time_str}"
-                
-                display.lines.append(DisplayLine(
-                    text=line_text,
-                    is_route=(i == 0),
-                    indent=(i > 0)
-                ))
+            line_text = f"{abbrev_route} {direction_abbrev}: {times_str}"
+            display.lines.append(DisplayLine(
+                text=line_text,
+                is_route=True,
+            ))
         
         # Add any errors at the bottom
         for error in data.get('errors', []):

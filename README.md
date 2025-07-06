@@ -21,8 +21,8 @@ InstantMBTA is a real-time MBTA transit display that shows train schedules and p
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/instantmbta.git
-cd instantmbta
+git clone git@github.com:seastco/InstantMBTA.git
+cd InstantMBTA
 ```
 
 2. Install dependencies:

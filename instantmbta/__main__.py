@@ -101,6 +101,8 @@ def run_once(config, display_mode, ig, it, logger):
         
         # Format for display
         display_data = display_mode.format_for_display(raw_data)
+        print(raw_data)
+        print(display_data)
         
         # Update display if available
         if it is not None:
