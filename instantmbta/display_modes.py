@@ -37,6 +37,18 @@ class DisplayData:
     lines: List[DisplayLine] = field(default_factory=list)
     refresh_seconds: int = 60
 
+    def __eq__(self, other):
+        if not isinstance(other, DisplayData):
+            return False
+        return (
+            self.title == other.title and
+            self.date == other.date and
+            self.lines == other.lines and
+            self.refresh_seconds == other.refresh_seconds
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 class DisplayMode(ABC):
     """Abstract base class for display modes."""
@@ -97,59 +109,56 @@ class SingleStationMode(DisplayMode):
     """Display mode for tracking multiple routes at a single station."""
     
     def gather_data(self, ig: InfoGather) -> Dict:
-        """Gather predictions for all configured routes."""
-        data = {
-            'station': self.config.station,
-            'predictions': [],
-            'errors': []
-        }
-        
+        """
+        For each (route, direction) call `get_predictions_filtered`
+        and convert the returned list into `TrainPrediction` objects.
+        Any exception → record an error, move on.
+        """
+        data = {"station": self.config.station, "predictions": [], "errors": []}
+
         for route in self.config.routes:
-            try:
-                # Get inbound predictions
-                if route.has_inbound:
+            for dir_id, dir_label, limit in (
+                ("0", "inbound", route.inbound),
+                ("1", "outbound", route.outbound),
+            ):
+                if limit == 0:
+                    continue
+                try:
                     predictions = ig.get_predictions_filtered(
-                        self.config.station_id, 
-                        "0",  # inbound
-                        route.route_id,
-                        route.inbound
+                        self.config.station_id, dir_id, route.route_id, limit
                     )
-                    
-                    for pred in predictions:
-                        data['predictions'].append(TrainPrediction(
-                            time=datetime.fromisoformat(pred['departure_time']),
-                            route_name=route.route_name,
-                            direction="inbound",
-                            destination=pred.get('destination'),
-                            uncertainty_minutes=pred.get('departure_uncertainty', 120) // 60 if pred.get('departure_uncertainty') else None
-                        ))
-                
-                # Get outbound predictions  
-                if route.has_outbound:
-                    predictions = ig.get_predictions_filtered(
-                        self.config.station_id,
-                        "1",  # outbound
-                        route.route_id, 
-                        route.outbound
-                    )
-                    
-                    for pred in predictions:
-                        data['predictions'].append(TrainPrediction(
-                            time=datetime.fromisoformat(pred['departure_time']),
-                            route_name=route.route_name,
-                            direction="outbound",
-                            destination=pred.get('destination'),
-                            uncertainty_minutes=pred.get('departure_uncertainty', 120) // 60 if pred.get('departure_uncertainty') else None
-                        ))
-                        
-            except Exception as e:
-                self.logger.error(f"Error getting predictions for {route.route_name}: {e}")
-                data['errors'].append(f"{route.route_name}: {str(e)}")
-        
-        # Sort predictions by time
-        data['predictions'].sort(key=lambda p: p.time)
-        
+                except Exception as e:
+                    data["errors"].append(f"{route.route_name}: {e}")
+                    continue
+
+                for raw in predictions:
+                    try:
+                        tp = self._build_tp(raw, route.route_name, dir_label)
+                        data["predictions"].append(tp)
+                    except Exception:
+                        # Skip malformed entry
+                        continue
+
+        data["predictions"].sort(key=lambda tp: tp.time)
         return data
+
+    def _build_tp(self, raw: dict, route_name: str, direction: str) -> TrainPrediction:
+        attrs = raw.get("attributes", raw)
+        ts = attrs.get("departure_time") or attrs.get("arrival_time")
+        if not ts:
+            raise ValueError("missing departure_time")
+
+        dt = datetime.fromisoformat(ts) if isinstance(ts, str) else ts
+        unc = attrs.get("departure_uncertainty")
+        dest = raw.get("destination")
+
+        return TrainPrediction(
+            time=dt,
+            route_name=route_name,
+            direction=direction,
+            destination=dest,
+            uncertainty_minutes=(unc // 60) if unc else None,
+        )
 
     def _parse_predictions(self, response_data: Dict, route_id: str, route_name: str, 
                           direction: str, count: int) -> List[TrainPrediction]:
@@ -318,9 +327,7 @@ class MultiStationMode(DisplayMode):
         
         return display
 
-
 def create_display_mode(config: Config) -> DisplayMode:
-    """Factory function to create the appropriate display mode."""
     if config.mode == 'single-station':
         return SingleStationMode(config)
     elif config.mode == 'multi-station':

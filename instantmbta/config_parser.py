@@ -155,8 +155,13 @@ class ConfigParser:
         return self.ROUTE_IDS.get(route_name.lower().strip(), route_name)
 
     def parse_yaml(self, config_path: Path) -> Config:
-        with open(config_path, 'r') as f:
-            data = yaml.safe_load(f)
+        try:
+            with open(config_path, 'r') as f:
+                data = yaml.safe_load(f)
+        except FileNotFoundError:
+            raise ValueError(f"Config file {config_path} not found")
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in {config_path}: {e}") from e
 
         # Display settings
         disp = data.get('display', {})

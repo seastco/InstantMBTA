@@ -3,8 +3,6 @@
 import unittest
 import tempfile
 import yaml
-import sys
-import os
 from pathlib import Path
 
 from instantmbta.config_parser import ConfigParser
@@ -52,21 +50,13 @@ class TestConfigIntegration(unittest.TestCase):
         
         for route in config.routes:
             if route.has_inbound:
-                predictions = self.ig.get_predictions(
-                    config.station_id, 
-                    "0"  # inbound direction
+                preds = self.ig.get_predictions_filtered(
+                    config.station_id, "0", route.route_id, route.inbound
                 )
-                
-                if predictions and predictions.status_code == 200:
-                    data = predictions.json()
-                    print(f"\nRoute: {route.route_name}, Direction: inbound")
-                    print(f"Found {len(data.get('data', []))} predictions")
-                    
-                    # Show first few predictions
-                    for i, pred in enumerate(data.get('data', [])[:route.inbound]):
-                        departure_time = pred.get('attributes', {}).get('departure_time')
-                        if departure_time:
-                            print(f"  Prediction {i+1}: {departure_time}")
+                print(f"\nRoute: {route.route_name}, Direction: inbound")
+                print(f"Found {len(preds)} predictions")
+                for i, pred in enumerate(preds):
+                    print(f"  Prediction {i+1}: {pred['departure_time']}")
     
     def test_central_square_bidirectional(self):
         """Test Central Square bidirectional configuration."""
@@ -86,31 +76,26 @@ class TestConfigIntegration(unittest.TestCase):
         self.assertEqual(config.routes[0].route_id, 'Red')
         
         print("\nTesting Central Square bidirectional predictions...")
-        
         route = config.routes[0]
         
         # Get inbound predictions
         if route.has_inbound:
-            inbound_predictions = self.ig.get_predictions(config.station_id, "0")
-            if inbound_predictions and inbound_predictions.status_code == 200:
-                data = inbound_predictions.json()
-                print(f"\nInbound predictions: {len(data.get('data', []))}")
-                for i, pred in enumerate(data.get('data', [])[:route.inbound]):
-                    departure_time = pred.get('attributes', {}).get('departure_time')
-                    if departure_time:
-                        print(f"  Inbound {i+1}: {departure_time}")
-        
+            inbound = self.ig.get_predictions_filtered(
+                config.station_id, "0", route.route_id, route.inbound
+            )
+            print(f"\nInbound predictions: {len(inbound)}")
+            for i, pred in enumerate(inbound):
+                print(f"  Inbound {i+1}: {pred['departure_time']}")
+
         # Get outbound predictions
         if route.has_outbound:
-            outbound_predictions = self.ig.get_predictions(config.station_id, "1")
-            if outbound_predictions and outbound_predictions.status_code == 200:
-                data = outbound_predictions.json()
-                print(f"\nOutbound predictions: {len(data.get('data', []))}")
-                for i, pred in enumerate(data.get('data', [])[:route.outbound]):
-                    departure_time = pred.get('attributes', {}).get('departure_time')
-                    if departure_time:
-                        print(f"  Outbound {i+1}: {departure_time}")
-    
+            outbound = self.ig.get_predictions_filtered(
+                config.station_id, "1", route.route_id, route.outbound
+            )
+            print(f"\nOutbound predictions: {len(outbound)}")
+            for i, pred in enumerate(outbound):
+                print(f"  Outbound {i+1}: {pred['departure_time']}")
+
     def test_multi_station_mode_schedule(self):
         """Test multi-station mode with schedule data."""
         config_dict = {

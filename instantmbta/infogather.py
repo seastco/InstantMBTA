@@ -136,15 +136,6 @@ class InfoGather():
         self.logger.debug("Getting schedule %s", request_string)
         return self._make_api_request(request_string)
 
-    def get_predictions(self, stop_id, direction_id):
-        """
-        Given a STOP ID and a DIRECTION ID (INBOUND or OUTBOUND)
-        Returns the predictions
-        """
-        request_string = API_URL+'/predictions?filter[stop]='+stop_id+'&filter[direction_id]='+direction_id+'&include=stop&'+API_REQUEST
-        self.logger.debug("Getting predictions %s", request_string)
-        return self._make_api_request(request_string)
-
     def find_prediction_by_id(self, prediction_id, predictions):
         """
         Given a prediction ID, find the prediction in a list of prediction data using dictionary lookup.
@@ -267,9 +258,13 @@ class InfoGather():
             self.logger.error(f"Error getting schedule for route {route_id} at stop {stop_id}: {str(e)}")
             return None, None, None, None
 
-    def get_predictions_filtered(self, stop_id: str, direction_id: str, 
-                           route_id: Optional[str] = None, 
-                           count: int = 3) -> List[Dict]:
+    def get_predictions_filtered(
+        self,
+        stop_id: str,
+        direction_id: str, 
+        route_id: Optional[str] = None, 
+        count: int = 3
+    ) -> List[Dict]:
         """
         Get filtered predictions for a specific stop, direction, and optionally route.
         
@@ -299,19 +294,20 @@ class InfoGather():
             data = response.json()
             predictions = []
             
-            for item in data.get('data', [])[:count]:
+            for item in data.get('data', []):
                 attrs = item.get('attributes', {})
                 relationships = item.get('relationships', {})
                 
                 # Get departure or arrival time
-                departure_time = attrs.get('departure_time') or attrs.get('arrival_time')
-                if not departure_time:
+                departure_time = attrs.get('departure_time')
+                arrival_time   = attrs.get('arrival_time')
+                if departure_time is None and arrival_time is None:
                     continue
-                    
+
                 prediction = {
                     'id': item.get('id'),
-                    'departure_time': departure_time,
-                    'arrival_time': attrs.get('arrival_time'),
+                    'departure_time': departure_time or arrival_time,
+                    'arrival_time': arrival_time,
                     'direction_id': attrs.get('direction_id'),
                     'route_id': relationships.get('route', {}).get('data', {}).get('id'),
                     'trip_id': relationships.get('trip', {}).get('data', {}).get('id'),
@@ -328,7 +324,8 @@ class InfoGather():
                             
                 predictions.append(prediction)
                 
-            return predictions
+            # Trim to the requested count *after* filtering
+            return predictions[:count]
             
         except Exception as e:
             self.logger.error(f"Error getting filtered predictions: {str(e)}")
